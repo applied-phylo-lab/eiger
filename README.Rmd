@@ -40,7 +40,7 @@ library(eiger)
 set.seed(42)
 yule_tree <- TreeSim::sim.bd.taxa(50, 1, 1, 0, 1, complete = FALSE)[[1]]
 branch_contributions <- compute_branch_contributions(yule_tree, "vcv", 1:10)
-branch_contributions
+utils::head(branch_contributions)
 ```
 
 You can also plot the branch contributions:
@@ -63,7 +63,7 @@ x <- BM[, 1]
 y <- BM[, 2]
 
 df <- prepare_eiger(x, y, yule_tree, 20)
-df
+utils::head(df)
 ```
 
 Then you can run eiger regression (phylolm with eigenvectors of the variance-covariance matrix as fixed effects):
