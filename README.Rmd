@@ -63,7 +63,7 @@ x <- BM[, 1]
 y <- BM[, 2]
 
 df <- prepare_eiger(x, y, yule_tree, 20)
-utils::head(df)
+utils::head(df[, 1:10])
 ```
 
 Then you can run eiger regression (phylolm with eigenvectors of the variance-covariance matrix as fixed effects):
