@@ -1,9 +1,0 @@
-compute_branch_contributions
-                        Compute branch contributions to eigenvectors of
-                        variance-covariance matrices
-plot_branch_contributions
-                        Plot branch contributions to an eigenvector of
-                        variance-covariance matrices
-prepare_eiger           Prepare the data frame for running eiger
-                        regression
-run_eiger               Run eiger regression
