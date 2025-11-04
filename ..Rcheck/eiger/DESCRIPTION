@@ -1,0 +1,29 @@
+Package: eiger
+Title: Run Phylogenetic Analyses Including Eigenvectors
+Version: 0.0.0.9000
+Authors@R: c(
+    person("Qifan", "Wang", , "qw64@cornell.edu", role = c("aut", "cre")),
+    person("Joshua", "Schraiber", , "schraibe@usc.edu", role = "aut"),
+    person("Michael", "Edge", , "edgem@usc.edu", role = "aut"),
+    person("Matt", "Pennell", , "mpennell@cornell.edu", role = "aut")
+  )
+Author: Qifan Wang [aut, cre], Joshua Schraiber [aut], Michael Edge [aut],
+    Matt Pennell [aut]
+Maintainer: Qifan Wang <qw64@cornell.edu>
+Description: A package for incorporating eigenvectors of
+    variance-covariance matrices into phylogenetic analyses. Given a
+    phylogenetic tree, 'eiger' computes and visualizes the contributions
+    of the branches to the eigenvectors of some version of
+    variance-covariance matrix of the tree. If trait values are provided,
+    'eiger' can also run phylogenetic generalized least squares with
+    eigenvectors included as fixed effects to investigate whether the
+    traits are associated.
+License: MIT + file LICENSE
+Imports: ape, graphics, grDevices, phylolm, phytools, rlang, stats,
+        utils
+Suggests: testthat (>= 3.0.0), TreeSim, withr
+Config/testthat/edition: 3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Built: R 4.5.0; ; 2025-11-04 04:57:20 UTC; unix
