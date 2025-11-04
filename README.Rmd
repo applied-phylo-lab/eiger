@@ -1,0 +1,80 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# eiger
+
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/applied-phylo-lab/eiger/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/applied-phylo-lab/eiger/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
+
+The goal of eiger is to incorporating eigenvectors of variance-covariance matrices into phylogenetic analyses. Given a phylogenetic tree, 'eiger' computes and visualizes the contributions of the branches to the eigenvectors of some version of variance-covariance matrix of the tree. If trait values are provided, 'eiger' can also run phylogenetic generalized least squares with eigenvectors included as fixed effects to investigate whether the traits are associated.
+
+## Installation
+
+You can install the development version of eiger from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("applied-phylo-lab/eiger")
+```
+
+## Example
+
+This is a basic example which shows you how to compute the contributions of the branches to the eigenvectors of a variance-covariance matrix of the phylogenetic tree:
+
+```{r compute_branch_contributions}
+library(eiger)
+
+set.seed(42)
+yule_tree <- TreeSim::sim.bd.taxa(50, 1, 1, 0, 1, complete = FALSE)[[1]]
+branch_contributions <- compute_branch_contributions(yule_tree, "vcv", 1:10)
+branch_contributions
+```
+
+You can also plot the branch contributions:
+
+```{r plot_branch_contributions_1}
+plot_branch_contributions(yule_tree, branch_contributions, "vcv", 3)
+```
+
+Alternatively, you can compute and plot the contributions of the branches to an eigenvector of a variance-covariance matrix of the phylogenetic tree in one step:
+
+```{r plot_branch_contributions_2}
+plot_branch_contributions(yule_tree, cov_matrix = "dcvcv", dim = 8)
+```
+
+Another common issue to mitigate the confounding in phylogenetic regressions. Given two quantitative traits and a phylogenetic tree, you can first get the eigenvectors of the variance-covariance matrix for convenience of downstream analyses:
+
+```{r prepare_eiger}
+BM <- phytools::fastBM(yule_tree, 1, nsim = 2)
+x <- BM[, 1]
+y <- BM[, 2]
+
+df <- prepare_eiger(x, y, yule_tree, 20)
+df
+```
+
+Then you can run eiger regression (phylolm with eigenvectors of the variance-covariance matrix as fixed effects):
+
+```{r run_eiger_1}
+run_eiger(x, y, yule_tree, 20, df = df)
+```
+
+Alternatively, you can compute the eigenvectors and run eiger regression in one step:
+
+```{r run_eiger_2}
+run_eiger(x, y, yule_tree, 30)
+```
+
