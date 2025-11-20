@@ -61,7 +61,7 @@ try(compute_cov_matrices(broken_tree))
 broken_tree$edge.length <- c(1, 2, NA, 1)
 try(compute_cov_matrices(broken_tree))
 broken_tree$edge.length <- c(1, 2, -1, 1)
-try(compute_branch_contributions(broken_tree, "vcv", 2))
+try(compute_cov_matrices(broken_tree))
 }
 
 }

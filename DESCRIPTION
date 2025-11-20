@@ -21,6 +21,7 @@ Description: A package for incorporating eigenvectors of
 License: MIT + file LICENSE
 Imports:
     ape,
+    cli,
     graphics,
     grDevices,
     phylolm,

@@ -18,10 +18,13 @@
 #'
 #' @keywords internal
 check_phylo <- function(tree) {
-  ape_check <- utils::capture.output(ape::checkValidPhylo(tree))
+  tryCatch({
+    ape_check <- utils::capture.output(ape::checkValidPhylo(tree))
+  }, error = function(e) {
+    cli::cli_abort("The input tree must be a valid object of class 'phylo'.")
+  })
   if (any(grepl("FATAL", ape_check, ignore.case = TRUE))) {
-    stop("The input tree must be a valid object of class 'phylo'.",
-         call. = FALSE)
+    cli::cli_abort("The input tree must be a valid object of class 'phylo'.")
   }
   invisible(NULL)
 }
@@ -154,21 +157,59 @@ compute_branch_egrm <- function(x) {
 #' broken_tree$edge.length <- c(1, 2, NA, 1)
 #' try(check_phylo_branches(broken_tree))
 #' broken_tree$edge.length <- c(1, 2, -1, 1)
-#' try(check_phylo_branches(broken_tree, "vcv", 2))
+#' try(check_phylo_branches(broken_tree))
 #' }
 #'
 #' @keywords internal
 check_phylo_branches <- function(tree) {
   if (is.null(tree$edge.length)) {
-    stop("The input tree must have branch lengths.", call. = FALSE)
+    cli::cli_abort("Can't find branch lengths in the input tree.")
   }
-  if (length(tree$edge.length) != length(tree$edge[, 1]) || any(is.na(tree$edge.length))) {
-    stop("The input tree must have defined lengths for all of its branches.",
-         call. = FALSE)
+  if (length(tree$edge.length) != length(tree$edge[, 1])) {
+    n_edges <- length(tree$edge[, 1])
+    n_edge_lengths <- length(tree$edge.length)
+    cli::cli_abort(c(
+      "Can't find branch lengths for all the branches of the input tree.",
+      "i" = "The imput tree has {n_edges} branches.",
+      "i" = "There are only {n_edge_lengths} branch lengths."))
+  }
+  if (any(is.na(tree$edge.length))) {
+    na_idx <- which(is.na(tree$edge.length))
+    n <- length(na_idx)
+    listed <- utils::head(na_idx, 5)
+    n_listed <- length(listed)
+
+    bullets <- paste0("Branch ", listed, " does not have branch length.")
+    bullets <- stats::setNames(bullets, rep("x", n_listed))
+
+    if (n > 5) {
+      n_extra <- n - 5
+      extra_bullet <- paste0("... and ", n_extra, " more branches do not have branch lengths.")
+      bullets <- c(bullets, extra_bullet)
+    }
+
+    cli::cli_abort(c(
+      "Can't find branch lengths for all the branches of the input tree.",
+      bullets))
   }
   if (any(tree$edge.length < 0)) {
-    stop("The input tree must have branches of non-negative lengths.",
-         call. = FALSE)
+    negative_idx <- which(tree$edge.length < 0)
+    n <- length(negative_idx)
+    listed <- utils::head(negative_idx, 5)
+    n_listed <- length(listed)
+
+    bullets <- paste0("Branch ", listed, " has negative branch length.")
+    bullets <- stats::setNames(bullets, rep("x", n_listed))
+
+    if (n > 5) {
+      n_extra <- n - 5
+      extra_bullet <- paste0("... and ", n_extra, " more branches have negative branch lengths.")
+      bullets <- c(bullets, extra_bullet)
+    }
+
+    cli::cli_abort(c(
+      "Branch lengths for all the branches of the input tree must be non-negative.",
+      bullets))
   }
   invisible(NULL)
 }
@@ -226,7 +267,7 @@ check_phylo_branches <- function(tree) {
 #' broken_tree$edge.length <- c(1, 2, NA, 1)
 #' try(compute_cov_matrices(broken_tree))
 #' broken_tree$edge.length <- c(1, 2, -1, 1)
-#' try(compute_branch_contributions(broken_tree, "vcv", 2))
+#' try(compute_cov_matrices(broken_tree))
 #' }
 #'
 #' @keywords internal
@@ -251,11 +292,18 @@ compute_cov_matrices <- function(tree, cov_matrix = c("dcvcv", "vcv", "egrm")) {
     compute_matrix_branch <- function(...) C_N %*% compute_branch_vcv(...) %*% C_N
   }
 
+  # determine if one needs to divide the results by sum_branch_lengths
+  if (cov_matrix == "egrm") {
+    denom <- sum_branch_lengths
+  } else {
+    denom <- 1
+  }
+
   cov_matrices <- matrix(0, nrow = n_tips^2, ncol = n_branches + 1)
   # calculate the weighted variance-covariance matrix for each branch
   for (i in 1:n_branches) {
     branch <- G[i, ]
-    weight <- tree$edge.length[i] / sum_branch_lengths
+    weight <- tree$edge.length[i] / denom
     cov_matrix_branch <- compute_matrix_branch(branch) * weight
     cov_matrices[, i] <- as.vector(cov_matrix_branch)
   }
@@ -271,6 +319,48 @@ compute_cov_matrices <- function(tree, cov_matrix = c("dcvcv", "vcv", "egrm")) {
                     paste0(cov_matrix, "_tot"))
 
   list(cov_matrices = df, cov_matrix_tree = cov_matrix_total)
+}
+
+#' Construct the variance-covariance matrix for a phylogenetic tree
+#'
+#' `compute_cov_matrix()` computes some version of variance-covariance matrix
+#' for a phylogenetic tree.
+#'
+#' @inheritParams compute_cov_matrices
+#'
+#' @returns A matrix representing the variance-covariance matrix for the whole
+#'   phylogenetic tree. Raises error if the input is not a valid tree of class
+#'   `"phylo"` or if not all the branch lengths are defined or if some branch
+#'   lengths are negative.
+#'
+#' @examples
+#' set.seed(42)
+#' yule_tree <- TreeSim::sim.bd.taxa(10, 1, 1, 0, 1, complete = FALSE)[[1]]
+#' compute_cov_matrix(yule_tree)
+#' compute_cov_matrix(yule_tree, cov_matrix = "egrm")
+#'
+#' # Input tree must be a valid object of class "phylo"
+#' broken_tree <- list(edge = matrix(1:4, 2, 2), tip.label = letters[1:3])
+#' try(compute_cov_matrix(broken_tree))
+#'
+#' # Input tree must have all the branch lengths defined and non-negative
+#' broken_tree <- list(edge = matrix(c(4, 1, 4, 5, 5, 2, 5, 3), 4, 2, byrow = TRUE),
+#'                     tip.label = letters[1:3],
+#'                     Nnode = 2)
+#' class(broken_tree) <- "phylo"
+#' try(compute_cov_matrix(broken_tree))
+#' broken_tree$edge.length <- c(1, 2)
+#' try(compute_cov_matrix(broken_tree))
+#' broken_tree$edge.length <- c(1, 2, NA, 1)
+#' try(compute_cov_matrix(broken_tree))
+#' broken_tree$edge.length <- c(1, 2, -1, 1)
+#' try(compute_cov_matrix(broken_tree))
+#'
+#' @export
+compute_cov_matrix <- function(tree, cov_matrix = c("dcvcv", "vcv", "egrm")) {
+  cov_matrix <- match.arg(cov_matrix)
+  cov_results <- compute_cov_matrices(tree, cov_matrix)
+  cov_results$cov_matrix_tree
 }
 
 #' Check if the input dimensions are integers between some lower and upper bound
@@ -300,11 +390,26 @@ compute_cov_matrices <- function(tree, cov_matrix = c("dcvcv", "vcv", "egrm")) {
 #' @keywords internal
 check_dimensions <- function(x, low, high) {
   if (!rlang::is_integerish(x)) {
-    stop("The input dimensions must be integers.", call. = FALSE)
+    cli::cli_abort("The input dimensions must be integers.")
   }
   if (any(x < low | x > high)) {
     error_message <- paste0("The input dimensions must be between ", low, " and ", high, ".")
-    stop(error_message, call. = FALSE)
+
+    idx <- which(x < low | x > high)
+    n <- length(idx)
+    listed <- utils::head(idx, 5)
+    n_listed <- length(listed)
+
+    bullets <- paste0("Dimension ", listed, " is not between ", low, " and ", high, ".")
+    bullets <- stats::setNames(bullets, rep("x", n_listed))
+
+    if (n > 5) {
+      n_extra <- n - 5
+      extra_bullet <- paste0("... and ", n_extra, " more dimensions are not between ", low, " and ", high, ".")
+      bullets <- c(bullets, extra_bullet)
+    }
+
+    cli::cli_abort(c(error_message, bullets))
   }
   invisible(NULL)
 }
@@ -418,3 +523,4 @@ compute_branch_contributions <- function(tree, cov_matrix = c("dcvcv", "vcv", "e
   colnames(df) <- paste0("dim_", dims)
   df
 }
+

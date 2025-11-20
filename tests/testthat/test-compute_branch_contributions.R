@@ -13,6 +13,42 @@ test_that("check_phylo() passes for valid input trees", {
 test_that("check_phylo() raises errors for invalid inputs", {
   broken_tree <- list(edge = matrix(1:4, 2, 2), tip.label = letters[1:3])
   expect_error(check_phylo(broken_tree), "valid")
+
+  broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 5L, 2L, 5L, 3L),
+                                    4, 2, byrow = TRUE),
+                      tip.label = letters[1:3],
+                      Nnode = 1L)
+  expect_error(check_phylo(broken_tree), "valid")
+
+  broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 5L, 2L, 5L, 3L),
+                                    4, 2, byrow = TRUE),
+                      tip.label = letters[1:3],
+                      Nnode = 3L)
+  expect_error(check_phylo(broken_tree), "valid")
+
+  broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 5L, 2L, 5L, 3L),
+                                    4, 2, byrow = TRUE),
+                      tip.label = letters[1:4],
+                      Nnode = 1L)
+  expect_error(check_phylo(broken_tree), "valid")
+
+  broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 5L, 2L, 5L, 3L),
+                                    4, 2, byrow = TRUE),
+                      tip.label = letters[1:2],
+                      Nnode = 3L)
+  expect_error(check_phylo(broken_tree), "valid")
+
+  broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 4L, 2L, 4L, 3L),
+                                    4, 2, byrow = TRUE),
+                      tip.label = letters[1:3],
+                      Nnode = 2L)
+  expect_error(check_phylo(broken_tree), "valid")
+
+  broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 5L, 2L, 5L, 3L, 5L, 1L),
+                                    5, 2, byrow = TRUE),
+                      tip.label = letters[1:3],
+                      Nnode = 2L)
+  expect_error(check_phylo(broken_tree), "valid")
 })
 
 test_that("compute_descendancy_matrix() passes for valid input trees", {
@@ -45,6 +81,36 @@ test_that("compute_descendancy_matrix() passes for valid input trees", {
 
 test_that("compute_descendancy_matrix() raises errors for invalid inputs", {
   broken_tree <- list(edge = matrix(1:4, 2, 2), tip.label = letters[1:3])
+  expect_error(compute_descendancy_matrix(broken_tree), "valid")
+
+  broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 5L, 2L, 5L, 3L),
+                                    4, 2, byrow = TRUE),
+                      tip.label = letters[1:3],
+                      Nnode = 1L)
+  expect_error(compute_descendancy_matrix(broken_tree), "valid")
+
+  broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 5L, 2L, 5L, 3L),
+                                    4, 2, byrow = TRUE),
+                      tip.label = letters[1:3],
+                      Nnode = 3L)
+  expect_error(compute_descendancy_matrix(broken_tree), "valid")
+
+  broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 5L, 2L, 5L, 3L),
+                                    4, 2, byrow = TRUE),
+                      tip.label = letters[1:4],
+                      Nnode = 1L)
+  expect_error(compute_descendancy_matrix(broken_tree), "valid")
+
+  broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 5L, 2L, 5L, 3L),
+                                    4, 2, byrow = TRUE),
+                      tip.label = letters[1:2],
+                      Nnode = 3L)
+  expect_error(compute_descendancy_matrix(broken_tree), "valid")
+
+  broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 4L, 2L, 4L, 3L),
+                                    4, 2, byrow = TRUE),
+                      tip.label = letters[1:3],
+                      Nnode = 2L)
   expect_error(compute_descendancy_matrix(broken_tree), "valid")
 })
 
@@ -141,28 +207,31 @@ test_that("compute_phylo_branches() raises errors for invalid input trees", {
   expect_error(check_phylo_branches(felsenstein_tree), "branch lengths")
 })
 
-test_that("compute_cov_matrices() passes for vcv of yule tree", {
+test_that("compute_cov_matrices() and compute_cov_matrix() pass for vcv of yule tree", {
   yule_tree <- withr::with_seed(17, TreeSim::sim.bd.taxa(3, 1, 1, 0, 1, complete = FALSE)[[1]])
   yule_tree$edge.length <- c(2, 1, 3, 4)
 
   expected_yule_vcvs <- matrix(0, nrow = 9, ncol = 5)
-  expected_yule_vcvs[c(1, 2, 4, 5), 1] <- 0.2
-  expected_yule_vcvs[5, 2] <- 0.1
-  expected_yule_vcvs[1, 3] <- 0.3
-  expected_yule_vcvs[9, 4] <- 0.4
-  expected_yule_vcvs[c(1, 2, 4, 5, 9), 5] <- c(0.5, 0.2, 0.2, 0.3, 0.4)
-  expected_yule_vcv <- matrix(c(0.5, 0.2, 0,
-                                0.2, 0.3, 0,
-                                0, 0, 0.4), nrow = 3, byrow = TRUE)
+  expected_yule_vcvs[c(1, 2, 4, 5), 1] <- 2
+  expected_yule_vcvs[5, 2] <- 1
+  expected_yule_vcvs[1, 3] <- 3
+  expected_yule_vcvs[9, 4] <- 4
+  expected_yule_vcvs[c(1, 2, 4, 5, 9), 5] <- c(5, 2, 2, 3, 4)
+  expected_yule_vcv <- matrix(c(5, 2, 0,
+                                2, 3, 0,
+                                0, 0, 4), nrow = 3, byrow = TRUE)
   results <- compute_cov_matrices(yule_tree, "vcv")
   result_vcvs <- results$cov_matrices
   result_vcv <- results$cov_matrix_tree
 
   expect_equal(unname(as.matrix(result_vcvs)), expected_yule_vcvs)
   expect_equal(result_vcv, expected_yule_vcv)
+
+  result_vcv1 <- compute_cov_matrix(yule_tree, "vcv")
+  expect_equal(result_vcv1, expected_yule_vcv)
 })
 
-test_that("compute_cov_matrices() passes for vcv of felsenstein's worst case tree", {
+test_that("compute_cov_matrices() and compute_cov_matrix() pass for vcv of felsenstein's worst case tree", {
   s1 <- ape::stree(5, type = "star")
   s2 <- ape::stree(5, type = "star")
   s1$edge.length <- rep(1, 5)
@@ -173,18 +242,18 @@ test_that("compute_cov_matrices() passes for vcv of felsenstein's worst case tre
 
   expected_felsenstein_vcvs <- matrix(0, nrow = 100, ncol = 13)
   id_branch_1 <- as.vector(sapply(0:4, function(i) 10 * i + 1:5))
-  expected_felsenstein_vcvs[id_branch_1, c(1, 13)] <- 0.25
+  expected_felsenstein_vcvs[id_branch_1, c(1, 13)] <- 5
   id_branch_2 <- as.vector(sapply(5:9, function(i) 10 * i + 6:10))
-  expected_felsenstein_vcvs[id_branch_2, c(7, 13)] <- 0.25
-  expected_felsenstein_vcvs[cbind((2:6) * 11 - 21, 2:6)] <- 0.05
-  expected_felsenstein_vcvs[cbind((8:12) * 11 - 32, 8:12)] <- 0.05
+  expected_felsenstein_vcvs[id_branch_2, c(7, 13)] <- 5
+  expected_felsenstein_vcvs[cbind((2:6) * 11 - 21, 2:6)] <- 1
+  expected_felsenstein_vcvs[cbind((8:12) * 11 - 32, 8:12)] <- 1
   id_branch_3 <- (1:10) * 11 - 10
-  expected_felsenstein_vcvs[id_branch_3, 13] <- expected_felsenstein_vcvs[id_branch_3, 13] + 0.05
+  expected_felsenstein_vcvs[id_branch_3, 13] <- expected_felsenstein_vcvs[id_branch_3, 13] + 1
 
   expected_felsenstein_vcv <- matrix(0, nrow = 10, ncol = 10)
-  expected_felsenstein_vcv[1:5, 1:5] <- 0.25
-  expected_felsenstein_vcv[6:10, 6:10] <- 0.25
-  diag(expected_felsenstein_vcv) <- diag(expected_felsenstein_vcv) + 0.05
+  expected_felsenstein_vcv[1:5, 1:5] <- 5
+  expected_felsenstein_vcv[6:10, 6:10] <- 5
+  diag(expected_felsenstein_vcv) <- diag(expected_felsenstein_vcv) + 1
 
   results <- compute_cov_matrices(felsenstein_tree, "vcv")
   result_vcvs <- results$cov_matrices
@@ -192,9 +261,12 @@ test_that("compute_cov_matrices() passes for vcv of felsenstein's worst case tre
 
   expect_equal(unname(as.matrix(result_vcvs)), expected_felsenstein_vcvs)
   expect_equal(result_vcv, expected_felsenstein_vcv)
+
+  result_vcv1 <- compute_cov_matrix(felsenstein_tree, "vcv")
+  expect_equal(result_vcv1, expected_felsenstein_vcv)
 })
 
-test_that("compute_cov_matrices() passes for egrm of yule tree", {
+test_that("compute_cov_matrices() and compute_cov_matrix() pass for egrm of yule tree", {
   yule_tree <- withr::with_seed(17, TreeSim::sim.bd.taxa(3, 1, 1, 0, 1, complete = FALSE)[[1]])
   yule_tree$edge.length <- c(40, 60, 60, 100)
 
@@ -220,17 +292,20 @@ test_that("compute_cov_matrices() passes for egrm of yule tree", {
   expected_yule_egrms[c(3, 6, 7, 8), 5] <- val_3
   expected_yule_egrms[9, 5] <- val_4
   expected_yule_egrm <- matrix(c(val_1, val_2, val_3,
-                                val_2, val_1, val_3,
-                                val_3, val_3, val_4), nrow = 3, byrow = TRUE)
+                                 val_2, val_1, val_3,
+                                 val_3, val_3, val_4), nrow = 3, byrow = TRUE)
   results <- compute_cov_matrices(yule_tree, "egrm")
   result_egrms <- results$cov_matrices
   result_egrm <- results$cov_matrix_tree
 
   expect_equal(unname(as.matrix(result_egrms)), expected_yule_egrms)
   expect_equal(result_egrm, expected_yule_egrm)
+
+  result_egrm1 <- compute_cov_matrix(yule_tree, "egrm")
+  expect_equal(result_egrm1, expected_yule_egrm)
 })
 
-test_that("compute_cov_matrices() passes for dcvcv and egrm of random trees", {
+test_that("compute_cov_matrices() and compute_cov_matrix() pass for dcvcv and egrm of random trees", {
   yule_tree <- withr::with_seed(42, TreeSim::sim.bd.taxa(100, 1, 1, 0, 1, complete = FALSE)[[1]])
 
   results <- compute_cov_matrices(yule_tree, "dcvcv")
@@ -243,6 +318,11 @@ test_that("compute_cov_matrices() passes for dcvcv and egrm of random trees", {
   expect_equal(rowSums(result_dcvcv), rep(0, nrow(result_dcvcv)))
   expect_equal(result_dcvcv, t(result_dcvcv))
 
+  result_dcvcv1 <- compute_cov_matrix(yule_tree, "dcvcv")
+  expect_equal(colSums(result_dcvcv1), rep(0, ncol(result_dcvcv1)))
+  expect_equal(rowSums(result_dcvcv1), rep(0, nrow(result_dcvcv1)))
+  expect_equal(result_dcvcv1, t(result_dcvcv1))
+
   results <- compute_cov_matrices(yule_tree, "egrm")
   result_egrms <- results$cov_matrices
   result_egrm <- results$cov_matrix_tree
@@ -252,11 +332,17 @@ test_that("compute_cov_matrices() passes for dcvcv and egrm of random trees", {
   expect_equal(colSums(result_egrm), rep(0, ncol(result_egrm)))
   expect_equal(rowSums(result_egrm), rep(0, nrow(result_egrm)))
   expect_equal(result_egrm, t(result_egrm))
+
+  result_egrm1 <- compute_cov_matrix(yule_tree, "egrm")
+  expect_equal(colSums(result_egrm1), rep(0, ncol(result_egrm1)))
+  expect_equal(rowSums(result_egrm1), rep(0, nrow(result_egrm1)))
+  expect_equal(result_egrm1, t(result_egrm1))
 })
 
-test_that("compute_cov_matrices() raises errors for invalid input trees", {
+test_that("compute_cov_matrices() and compute_cov_matrix() raise errors for invalid input trees", {
   broken_tree <- list(edge = matrix(1:4, 2, 2), tip.label = letters[1:3])
   expect_error(compute_cov_matrices(broken_tree), "valid")
+  expect_error(compute_cov_matrix(broken_tree), "valid")
 
   broken_tree <- list(edge = matrix(c(4L, 1L, 4L, 5L, 5L, 2L, 5L, 3L),
                                     4, 2, byrow = TRUE),
@@ -264,18 +350,23 @@ test_that("compute_cov_matrices() raises errors for invalid input trees", {
                       Nnode = 2L)
   class(broken_tree) <- "phylo"
   expect_error(compute_cov_matrices(broken_tree), "branch lengths")
+  expect_error(compute_cov_matrix(broken_tree), "branch lengths")
 
   broken_tree$edge.length <- c(1, 2)
   expect_error(compute_cov_matrices(broken_tree), "all")
+  expect_error(compute_cov_matrix(broken_tree), "all")
   broken_tree$edge.length <- c(1, 2, NA, 1)
   expect_error(compute_cov_matrices(broken_tree), "all")
+  expect_error(compute_cov_matrix(broken_tree), "all")
   broken_tree$edge.length <- c(1, 2, -1, 1)
   expect_error(compute_cov_matrices(broken_tree), "non-negative")
+  expect_error(compute_cov_matrix(broken_tree), "non-negative")
 })
 
-test_that("compute_cov_matrices() raises errors for invalid input cov_matrix", {
+test_that("compute_cov_matrices() and compute_cov_matrix() raise errors for invalid input cov_matrix", {
   yule_tree <- withr::with_seed(42, TreeSim::sim.bd.taxa(10, 1, 1, 0, 1, complete = FALSE)[[1]])
   expect_error(compute_cov_matrices(yule_tree, "kinship"), "arg")
+  expect_error(compute_cov_matrix(yule_tree, "kinship"), "arg")
 })
 
 test_that("check_dimensions() passes for valid input dimensions", {

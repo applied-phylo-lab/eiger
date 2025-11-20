@@ -34,7 +34,7 @@ try(check_phylo_branches(broken_tree))
 broken_tree$edge.length <- c(1, 2, NA, 1)
 try(check_phylo_branches(broken_tree))
 broken_tree$edge.length <- c(1, 2, -1, 1)
-try(check_phylo_branches(broken_tree, "vcv", 2))
+try(check_phylo_branches(broken_tree))
 }
 
 }
