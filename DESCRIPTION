@@ -7,9 +7,6 @@ Authors@R: c(
     person("Michael", "Edge", , "edgem@usc.edu", role = "aut"),
     person("Matt", "Pennell", , "mpennell@cornell.edu", role = "aut")
   )
-Author: Qifan Wang [aut, cre], Joshua Schraiber [aut], Michael Edge [aut],
-    Matt Pennell [aut]
-Maintainer: Qifan Wang <qw64@cornell.edu>
 Description: A package for incorporating eigenvectors of
     variance-covariance matrices into phylogenetic analyses. Given a
     phylogenetic tree, 'eiger' computes and visualizes the contributions
