@@ -170,7 +170,7 @@ check_phylo_branches <- function(tree) {
     n_edge_lengths <- length(tree$edge.length)
     cli::cli_abort(c(
       "Can't find branch lengths for all the branches of the input tree.",
-      "i" = "The imput tree has {n_edges} branches.",
+      "i" = "The input tree has {n_edges} branches.",
       "i" = "There are only {n_edge_lengths} branch lengths."))
   }
   if (any(is.na(tree$edge.length))) {

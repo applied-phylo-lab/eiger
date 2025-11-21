@@ -14,6 +14,31 @@ get_default_colors <- function() {
   color_list
 }
 
+#' Check if an input color is valid
+#'
+#' `check_valid_color()` checks if an input color is valid.
+#'
+#' @param col A string representing color.
+#'
+#' @returns `TRUE` if the color is valid and `FALSE` otherwise.
+#'
+#' @examples
+#' \dontrun{
+#' check_valid_color("blue")
+#' check_valid_color("#BBCCEE")
+#' check_valid_color("apple")
+#' }
+#'
+#' @keywords internal
+check_valid_color <- function(col) {
+  tryCatch({
+    grDevices::col2rgb(col)
+    TRUE
+    }, error = function(e) {
+      FALSE
+    })
+}
+
 #' Create a color palette from a color-generating function or a set of colors
 #'
 #' `create_color_palette()` creates a new color palette by extracting colors
@@ -43,9 +68,11 @@ get_default_colors <- function() {
 #' @keywords internal
 create_color_palette <- function(color_scheme = NULL, n_colors = 100) {
   # check n_colors
-  if (n_colors <= 1 || !rlang::is_integerish(n_colors)) {
-    stop("The input number of colors must an integer greater than 1.",
-         call. = FALSE)
+  if (!rlang::is_integerish(n_colors)) {
+    cli::cli_abort("The input number of colors must an integer.")
+  }
+  if (n_colors <= 1) {
+    cli::cli_abort("The input number of colors must greater than 1.")
   }
   # user provided no color scheme
   if (is.null(color_scheme)) {
@@ -61,16 +88,31 @@ create_color_palette <- function(color_scheme = NULL, n_colors = 100) {
         grDevices::col2rgb(color_scheme)
         color_palette <- grDevices::colorRampPalette(color_scheme)(n_colors)
       }, error = function(e) {
-        stop("The input list of colors must all represent valid colors.",
-             call. = FALSE)
+        invalid_colors <- color_scheme[!sapply(color_scheme, check_valid_color)]
+        n <- length(invalid_colors)
+        listed <- utils::head(invalid_colors, 5)
+        n_listed <- length(listed)
+
+        bullets <- paste0("Can't find color name '", listed, "'.")
+        bullets <- stats::setNames(bullets, rep("x", n_listed))
+
+        if (n > 5) {
+          n_extra <- n - 5
+          extra_bullet <- paste0("... and ", n_extra, " more color names can't be found.")
+          bullets <- c(bullets, extra_bullet)
+        }
+
+        cli::cli_abort(c(
+          "The input list of colors must all represent valid colors.",
+          bullets))
         })
     } else {
-      stop("The input color scheme must an available color-generating function in grDevices::hcl.pals().",
-           call. = FALSE)
+      error_message <- paste0("Can't find color-generating function '",
+                              color_scheme, "' in grDevices::hcl.pals().")
+      cli::cli_abort(error_message)
     }
   } else {
-    stop("The input color scheme must be in the form of a string or a vector of strings.",
-         call. = FALSE)
+    cli::cli_abort("The input color scheme must be in the form of a string or a vector of strings.")
   }
   color_palette
 }
@@ -143,8 +185,11 @@ check_plotting_data <- function(tree, branch_contributions, dim) {
   # branches of the phylogenetic tree
   n_branches <- length(tree$edge[, 1])
   if (nrow(branch_contributions) != n_branches) {
-    stop("The number of rows in the data frame is inconsistent with the phylogenetic tree.",
-         call. = FALSE)
+    n_rows <- nrow(branch_contributions)
+    cli::cli_abort(c(
+      "The number of rows in the data frame must be consistent with the phylogenetic tree.",
+      "i" = "The input tree has {n_branches} branches.",
+      "i" = "There are {n_rows} rows in the data frame."))
   }
   # the column dimensions should be compatible with the number of tips in the
   # phylogenetic tree
@@ -154,13 +199,18 @@ check_plotting_data <- function(tree, branch_contributions, dim) {
   tryCatch({
     check_dimensions(col_dims, 1, n_tips)
   }, error = function(e) {
-    stop("The column dimensions in the data frame is inconsistent with the phylogenetic tree.",
-         call. = FALSE)
+    original_lines <- strsplit(conditionMessage(e), "\n")[[1]]
+    rest_lines <- original_lines[-1]
+    new_message <- c(
+      "The column dimensions in the data frame must be consistent with the phylogenetic tree.",
+      "i" = "The phylogenetic tree has {n_tips} tips.",
+      rest_lines
+    )
+    cli::cli_abort(new_message)
   })
   # the dimension for plotting must be included in the data frame
   if (!(dim %in% col_dims)) {
-    stop("The dimension for plotting is not included in the data frame.",
-         call. = FALSE)
+    cli::cli_abort("Can't find the dimension for plotting in the data frame.")
   }
   invisible(NULL)
 }
@@ -171,7 +221,7 @@ check_plotting_data <- function(tree, branch_contributions, dim) {
 #'
 #' @param dim An integer representing the dimension of eigenvector for plotting.
 #' @param side See [graphics::mtext]. Default to `4`.
-#' @param line See [graphics::mtext]. Default to `5`.
+#' @param line See [graphics::mtext]. Default to `4`.
 #' @param cex See [graphics::mtext]. Default to `1.5`.
 #' @param ... Additional parameters passed to [graphics::mtext].
 #'
@@ -180,7 +230,7 @@ check_plotting_data <- function(tree, branch_contributions, dim) {
 #'
 #' @keywords internal
 #'
-add_text <- function(dim, side = 4, line = 5, cex = 1.5, ...) {
+add_text <- function(dim, side = 4, line = 4, cex = 1.5, ...) {
   plot_text <- paste0("Contributions to eigenvector ", dim)
   graphics::mtext(plot_text, side = side, line = line, cex = cex, ...)
 }
@@ -215,7 +265,7 @@ add_axis <- function(side = 4, cex.axis = 1.5, ...) {
 #'   adds title text to the color bar. Elements include:
 #'   \describe{
 #'     \item{side}{See [graphics::mtext]. Default to `4`.}
-#'     \item{line}{See [graphics::mtext]. Default to `5`.}
+#'     \item{line}{See [graphics::mtext]. Default to `4`.}
 #'     \item{cex}{See [graphics::mtext]. Default to `1.5`.}
 #'     \item{...}{Additional parameters passed to [graphics::mtext].}
 #'   }
@@ -278,7 +328,7 @@ add_colorbar <- function(color_breaks, color_palette,
 #'   adds title text to the color bar. Elements include:
 #'   \describe{
 #'     \item{side}{See [graphics::mtext]. Default to `4`.}
-#'     \item{line}{See [graphics::mtext]. Default to `5`.}
+#'     \item{line}{See [graphics::mtext]. Default to `4`.}
 #'     \item{cex}{See [graphics::mtext]. Default to `1.5`.}
 #'     \item{...}{Additional parameters passed to [graphics::mtext].}
 #'   }

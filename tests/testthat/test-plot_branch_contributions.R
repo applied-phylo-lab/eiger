@@ -1,3 +1,14 @@
+test_that("check_valid_color() passes for valid and invalid inputs", {
+  expect_true(check_valid_color("red"))
+  expect_true(check_valid_color("lightblue"))
+  expect_true(check_valid_color("#BBCCEE"))
+  expect_true(check_valid_color("#EEEEBB"))
+  expect_true(check_valid_color("#CCD"))
+  expect_false(check_valid_color("apple"))
+  expect_false(check_valid_color("CCE"))
+  expect_false(check_valid_color("Viridis"))
+})
+
 test_that("create_color_palette() works for valid inputs", {
   expect_no_error(create_color_palette(c("red", "blue"), 30))
   expect_no_error(create_color_palette(c("#BBCCEE", "#CCEEFF", "#CCDDAA", "#EEEEBB", "#FFCCCC"), 50))
@@ -9,11 +20,11 @@ test_that("create_color_palette() works for valid inputs", {
 })
 
 test_that("create_color_palette() fails for invalid inputs", {
-  expect_error(create_color_palette("red", 30), "available")
-  expect_error(create_color_palette("CoolColors", 80), "available")
-  expect_error(create_color_palette(c("apple", "blueberry"), 30), "valid")
-  expect_error(create_color_palette(c("#BBCCEE", "#CCEEFF", "#CCDAA"), 50), "valid")
-  expect_error(create_color_palette(c("#BBC", "CCE", "#CCD", "#EEE"), 50), "valid")
+  expect_error(create_color_palette("red", 30), "color-generating")
+  expect_error(create_color_palette("CoolColors", 80), "color-generating")
+  expect_error(create_color_palette(c("apple", "blueberry"), 30), "valid colors")
+  expect_error(create_color_palette(c("#BBCCEE", "#CCEEFF", "#CCDAA"), 50), "valid colors")
+  expect_error(create_color_palette(c("#BBC", "CCE", "#CCD", "#EEE"), 50), "valid colors")
   expect_error(create_color_palette(1, 50), "string")
   expect_error(create_color_palette("Viridis", 53.284), "integer")
   expect_error(create_color_palette("Viridis", 1), "greater than 1")
@@ -83,8 +94,8 @@ test_that("check_plotting_data() fails for invalid input data", {
 
   expect_error(check_plotting_data(yule_tree_2, branch_contributions_felsenstein, 3), "column")
 
-  expect_error(check_plotting_data(yule_tree_1, branch_contributions_yule_1, 19), "included")
-  expect_error(check_plotting_data(yule_tree_2, branch_contributions_yule_2, 7), "included")
+  expect_error(check_plotting_data(yule_tree_1, branch_contributions_yule_1, 19), "dimension for plotting")
+  expect_error(check_plotting_data(yule_tree_2, branch_contributions_yule_2, 7), "dimension for plotting")
 })
 
 test_that("add_colorbar() runs without error", {

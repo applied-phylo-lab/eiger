@@ -4,14 +4,14 @@
 \alias{add_text}
 \title{Add title text to the color bar}
 \usage{
-add_text(dim, side = 4, line = 5, cex = 1.5, ...)
+add_text(dim, side = 4, line = 4, cex = 1.5, ...)
 }
 \arguments{
 \item{dim}{An integer representing the dimension of eigenvector for plotting.}
 
 \item{side}{See \link[graphics:mtext]{graphics::mtext}. Default to \code{4}.}
 
-\item{line}{See \link[graphics:mtext]{graphics::mtext}. Default to \code{5}.}
+\item{line}{See \link[graphics:mtext]{graphics::mtext}. Default to \code{4}.}
 
 \item{cex}{See \link[graphics:mtext]{graphics::mtext}. Default to \code{1.5}.}
 

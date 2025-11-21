@@ -26,7 +26,7 @@ color bar.}
 adds title text to the color bar. Elements include:
 \describe{
 \item{side}{See \link[graphics:mtext]{graphics::mtext}. Default to \code{4}.}
-\item{line}{See \link[graphics:mtext]{graphics::mtext}. Default to \code{5}.}
+\item{line}{See \link[graphics:mtext]{graphics::mtext}. Default to \code{4}.}
 \item{cex}{See \link[graphics:mtext]{graphics::mtext}. Default to \code{1.5}.}
 \item{...}{Additional parameters passed to \link[graphics:mtext]{graphics::mtext}.}
 }}
