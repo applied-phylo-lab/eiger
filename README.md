@@ -40,19 +40,19 @@ yule_tree <- TreeSim::sim.bd.taxa(50, 1, 1, 0, 1, complete = FALSE)[[1]]
 branch_contributions <- compute_branch_contributions(yule_tree, "vcv", 1:10)
 utils::head(branch_contributions)
 #>           dim_1         dim_2         dim_3         dim_4         dim_5
-#> 1  5.997563e-01 -5.920484e-01 -2.705811e-03 -1.390093e-37 -2.372103e-03
-#> 2 -4.655880e-01  6.055110e+00 -5.237515e+00 -2.421425e-35 -2.920915e-01
-#> 3  1.713282e-02  1.910001e-01  5.455564e+00 -4.368296e-35 -4.708815e+00
-#> 4 -2.506396e+00 -1.102826e+01 -1.270390e+01  1.747282e-33  1.895381e+02
-#> 5 -1.167611e-02 -3.788404e-02 -1.746220e-02 -5.472827e-32 -7.444445e-01
-#> 6 -1.986950e-15 -2.491013e-13  1.492051e-15  1.151638e-30  8.328758e-15
+#> 1  1.141685e-02 -1.127013e-02 -5.150734e-05 -3.597569e-40 -4.515492e-05
+#> 2 -8.862850e-03  1.152640e-01 -9.970039e-02 -2.984063e-37 -5.560201e-03
+#> 3  3.261372e-04  3.635843e-03  1.038511e-01 -7.936061e-37 -8.963616e-02
+#> 4 -4.771130e-02 -2.099319e-01 -2.418292e-01 -5.916281e-35  3.608013e+00
+#> 5 -2.222644e-04 -7.211538e-04 -3.324073e-04 -4.516270e-34 -1.417111e-02
+#> 6 -3.657032e-17 -5.885154e-17  1.065220e-16  1.009457e-32 -8.902533e-17
 #>           dim_6         dim_7         dim_8         dim_9        dim_10
-#> 1 -1.315503e-06 -5.691909e-04 -4.339885e-05 -3.035812e-04 -5.203486e-07
-#> 2  1.124154e-05 -3.716735e-02  3.840075e-04 -1.808412e-02 -8.701055e-05
-#> 3 -5.439658e-06  5.504310e-02 -6.433562e-04 -6.151502e-01  7.352728e-05
-#> 4  1.651930e-04 -9.186165e+01 -4.907250e-02 -8.691762e+01  2.767092e-03
-#> 5 -1.225677e-06  3.764676e+00  3.875468e-03  8.592365e+00  7.604388e-05
-#> 6  2.104160e-13 -3.408082e-15 -1.678960e-14  4.248932e-14 -1.722425e-16
+#> 1 -2.504167e-08 -1.083502e-05 -8.261328e-07 -5.778918e-06 -9.905262e-09
+#> 2  2.139920e-07 -7.075109e-04  7.309899e-06 -3.442461e-04 -1.656317e-06
+#> 3 -1.035484e-07  1.047791e-03 -1.224681e-05 -1.170989e-02  1.399652e-06
+#> 4  3.144584e-06 -1.748662e+00 -9.341354e-04 -1.654548e+00  5.267388e-05
+#> 5 -2.333177e-08  7.166371e-02  7.377272e-05  1.635627e-01  1.447558e-06
+#> 6  6.150042e-16  2.680683e-16  1.312735e-16 -2.838803e-16  1.576034e-18
 ```
 
 You can also plot the branch contributions:
@@ -83,7 +83,7 @@ BM <- phytools::fastBM(yule_tree, 1, nsim = 2)
 x <- BM[, 1]
 y <- BM[, 2]
 
-df <- prepare_eiger(x, y, yule_tree, 20)
+df <- prepare_eiger(tree = yule_tree, n_eigenvectors = 20, x = x, y = y)
 utils::head(df[, 1:10])
 #>              X        Y    eigen_1    eigen_2     eigen_3       eigen_4
 #> t48  0.5059172 7.960040 -0.1576493 -0.1515420  0.00842073  0.000000e+00
@@ -105,7 +105,7 @@ Then you can run eiger regression (phylolm with eigenvectors of the
 variance-covariance matrix as fixed effects):
 
 ``` r
-run_eiger(x, y, yule_tree, 20, df = df)
+run_eiger(data = df, tree = yule_tree, n_eigenvectors = 20, x = x, y = y, prepared = TRUE)
 #> Call:
 #> phylolm::phylolm(formula = reg_formula, data = df, phy = tree)
 #> 
@@ -130,7 +130,7 @@ Alternatively, you can compute the eigenvectors and run eiger regression
 in one step:
 
 ``` r
-run_eiger(x, y, yule_tree, 30)
+run_eiger(tree = yule_tree, n_eigenvectors = 30, x = x, y = y)
 #> Call:
 #> phylolm::phylolm(formula = reg_formula, data = df, phy = tree)
 #> 

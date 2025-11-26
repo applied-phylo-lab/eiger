@@ -62,19 +62,20 @@ BM <- phytools::fastBM(yule_tree, 1, nsim = 2)
 x <- BM[, 1]
 y <- BM[, 2]
 
-df <- prepare_eiger(x, y, yule_tree, 20)
+df <- prepare_eiger(tree = yule_tree, n_eigenvectors = 20, x = x, y = y)
 utils::head(df[, 1:10])
 ```
+
 
 Then you can run eiger regression (phylolm with eigenvectors of the variance-covariance matrix as fixed effects):
 
 ```{r run_eiger_1}
-run_eiger(x, y, yule_tree, 20, df = df)
+run_eiger(data = df, tree = yule_tree, n_eigenvectors = 20, x = x, y = y, prepared = TRUE)
 ```
 
 Alternatively, you can compute the eigenvectors and run eiger regression in one step:
 
 ```{r run_eiger_2}
-run_eiger(x, y, yule_tree, 30)
+run_eiger(tree = yule_tree, n_eigenvectors = 30, x = x, y = y)
 ```
 

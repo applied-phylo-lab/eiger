@@ -11,20 +11,21 @@ Description: A package for incorporating eigenvectors of
     variance-covariance matrices into phylogenetic analyses. Given a
     phylogenetic tree, 'eiger' computes and visualizes the contributions
     of the branches to the eigenvectors of some version of
-    variance-covariance matrix of the tree. If trait values are provided,
+    variance-covariance matrix of the tree. If trait values and other variables are provided,
     'eiger' can also run phylogenetic generalized least squares with
-    eigenvectors included as fixed effects to investigate whether the
-    traits are associated.
+    eigenvectors included as fixed effects.
 License: MIT + file LICENSE
 Imports:
     ape,
     cli,
+    dplyr,
     graphics,
     grDevices,
     phylolm,
     phytools,
     rlang,
     stats,
+    stringr,
     utils
 Suggests: 
     testthat (>= 3.0.0),
