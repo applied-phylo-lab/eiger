@@ -116,21 +116,21 @@ test_that("clean_eiger() passes and raises warnings for valid but bad inputs", {
   expect_equal(df$Y, as.vector(y))
 
   names(y) <- NULL
-  expect_warning(expect_warning(df <- clean_eiger(tree = felsenstein_tree, n_eigenvectors = 5, x = x, y = y), "exist"), "exist")
+  expect_snapshot(df <- clean_eiger(tree = felsenstein_tree, n_eigenvectors = 5, x = x, y = y))
   expect_true(setequal(colnames(df), c("X", "Y")))
   expect_equal(rownames(df), felsenstein_tree$tip.label)
   expect_equal(df$X, as.vector(x))
   expect_equal(df$Y, as.vector(y))
 
   names(x) <- 1:20
-  expect_warning(expect_warning(df <- clean_eiger(tree = felsenstein_tree, n_eigenvectors = 5, x = x, y = y), "same names"), "exist")
+  expect_snapshot(df <- clean_eiger(tree = felsenstein_tree, n_eigenvectors = 5, x = x, y = y))
   expect_true(setequal(colnames(df), c("X", "Y")))
   expect_equal(rownames(df), felsenstein_tree$tip.label)
   expect_equal(df$X, as.vector(x))
   expect_equal(df$Y, as.vector(y))
 
   names(y) <- 1:20
-  expect_warning(expect_warning(df <- clean_eiger(tree = felsenstein_tree, n_eigenvectors = 5, x = x, y = y), "same names"), "same names")
+  expect_snapshot(df <- clean_eiger(tree = felsenstein_tree, n_eigenvectors = 5, x = x, y = y))
   expect_true(setequal(colnames(df), c("X", "Y")))
   expect_equal(rownames(df), felsenstein_tree$tip.label)
   expect_equal(df$X, as.vector(x))
@@ -156,7 +156,7 @@ test_that("clean_eiger() passes and raises warnings for valid but bad inputs", {
 
   df_extra <- as.data.frame(matrix(1:40, 20, 2, byrow = TRUE))
   colnames(df_extra) <- c("x", "y")
-  expect_warning(expect_warning(df <- clean_eiger(y ~ x + I(df_extra$y^2) + df_extra$x - 1, BM_df, tree = yule_tree, n_eigenvectors = 3), "match"), "match")
+  expect_snapshot(df <- clean_eiger(y ~ x + I(df_extra$y^2) + df_extra$x - 1, BM_df, tree = yule_tree, n_eigenvectors = 3))
   expect_true(setequal(colnames(df), c("y", "x", "z", "df_extra_y", "df_extra_x")))
   expect_equal(rownames(df), yule_tree$tip.label)
   expect_equal(df$x, as.vector(BM[, 1]))
@@ -164,7 +164,7 @@ test_that("clean_eiger() passes and raises warnings for valid but bad inputs", {
   expect_equal(df$df_extra_x, as.vector(df_extra$x))
   expect_equal(df$df_extra_y, as.vector(df_extra$y))
 
-  expect_warning(expect_warning(df <- clean_eiger(y ~ x + df_extra$x + group, BM_df, tree = yule_tree, n_eigenvectors = 3), "match"), "exist")
+  expect_snapshot(df <- clean_eiger(y ~ x + df_extra$x + group, BM_df, tree = yule_tree, n_eigenvectors = 3))
   expect_true(setequal(colnames(df), c("y", "x", "z", "df_extra_x", "group")))
   expect_equal(rownames(df), yule_tree$tip.label)
   expect_equal(df$x, as.vector(BM[, 1]))
@@ -173,7 +173,7 @@ test_that("clean_eiger() passes and raises warnings for valid but bad inputs", {
   expect_equal(df$group, group)
 
   names(group) <- 1:20
-  expect_warning(df <- clean_eiger(y ~ x + group, BM_df, yule_tree, 10), "same names")
+  expect_warning(df <- clean_eiger(y ~ x + group, BM_df, yule_tree, 10), "match")
   expect_true(setequal(colnames(df), c("x", "y", "z", "group")))
   expect_equal(rownames(df), yule_tree$tip.label)
   expect_equal(df$group, as.vector(group))
@@ -200,8 +200,8 @@ test_that("clean_eiger() fails for invalid inputs", {
   yule_tree <- withr::with_seed(17, TreeSim::sim.bd.taxa(10, 1, 1, 0, 1, complete = FALSE)[[1]])
   expect_error(clean_eiger(tree = yule_tree, n_eigenvectors = 20, x = 1:10, y = 3:12), "dimensions")
   expect_error(clean_eiger(tree = yule_tree, n_eigenvectors = 8, x = 1:9, y = 3:12), "same number")
-  expect_error(clean_eiger(tree = yule_tree, n_eigenvectors = 8, x = 1:10, y = 5:12), "same number")
-  expect_error(clean_eiger(tree = yule_tree, n_eigenvectors = 7, x = 1:10, y = rep("1", 10)), "numeric")
+  expect_snapshot(clean_eiger(tree = yule_tree, n_eigenvectors = 8, x = 1:10, y = 5:12), error = TRUE)
+  expect_snapshot(clean_eiger(tree = yule_tree, n_eigenvectors = 7, x = 1:10, y = rep("1", 10)), error = TRUE)
 })
 
 test_that("prepare_eiger() passes for valid inputs", {

@@ -42,6 +42,172 @@ parse_formula <- function(formula) {
   list(dfs = dfs, fields = fields, plains = plains)
 }
 
+#' Check if the data frame is compatible for eiger regression
+#'
+#' `check_dataframe()` checks if the data frame is compatible for eiger
+#' regression and modifies the row orders if the data frame is valid.
+#'
+#' @param df_val The data frame to check.
+#' @param tip_labels The tip labels of the phylogenetic tree for eiger
+#'   regression.
+#' @param df_name The name of the data frame. Default to `NULL`.
+#' @param is_data A boolean. `TRUE` if the data frame is the data argument used
+#'   for the regression, otherwise `FALSE`. Default to `FALSE`.
+#' @param n_tips The number of tips in the phylogenetic tree. Default to
+#'   `length(tip_labels)`.
+#'
+#' @returns The data frame with rows re-ordered based on `tip_labels` if the
+#'   data frame is valid. Raises error if:
+#' * The data frame cannot be coerced to a valid data frame,
+#' * The data frame does not have the same number of rows as the number of tips,
+#' * There are redundant labels for rows in the data frame.
+#'   Raises warning if the row names of the data frame do not match the tip
+#'   labels.
+#'
+#' @keywords internal
+check_dataframe <- function(df_val, tip_labels, df_name = NULL, is_data = FALSE, n_tips = length(tip_labels)) {
+  if (is_data) {
+    str1 <- "the data"
+    str2 <- "The data"
+    str3 <- str1
+  } else {
+    str1 <- df_name
+    str2 <- paste0("The data frame ", df_name)
+    str3 <- paste0("the data frame ", df_name)
+  }
+  # check if the data frame is a valid data frame
+  tryCatch({
+    df_val <- as.data.frame(df_val)
+    df_colnames <- colnames(df_val)
+    df_rownames <- rownames(df_val)
+    df_n_rows <- nrow(df_val)
+  }, error = function(e) {
+    cli::cli_abort(paste0("Can't coerce ", str1, " to a data frame."))
+  })
+  # check if the data frame has the same number of rows as the number of tips
+  if (df_n_rows != n_tips) {
+    cli::cli_abort(c(
+      "The data frame must have the same number of rows as the number of tips in the tree.",
+      "i" = paste0(str2, " has ", df_n_rows, " rows."),
+      "i" = paste0("The tree has ", n_tips, " tips.")))
+  }
+  # check if there are redundant labels for rows in the data frame
+  if (length(unique(df_rownames)) != length(df_rownames)) {
+    cli::cli_abort(paste0("The row names of ", str3, " must be all unique."))
+  }
+  # check if the row names are the same as tip labels
+  if (setequal(df_rownames, tip_labels)) {
+    df_val <- df_val[tip_labels, ]
+  } else {
+    cli::cli_warn(c(paste0("The row names of ", str3, " do not match the tip labels of the tree."),
+                    "i" = "The order of the rows must be the same as the order of tip labels of the tree."))
+  }
+  df_val
+}
+
+#' Check if a column in the data frame contains `NA` values
+#'
+#' `check_column_na()` checks if a column in the data frame contains any `NA`
+#' values.
+#'
+#' @param df_val The data frame to check.
+#' @param col A string for the column name to check in the data frame.
+#' @param df_name The name of the data frame. Default to `NULL`.
+#' @param is_data A boolean. `TRUE` if the data frame is the data argument used
+#'   for the regression, otherwise `FALSE`. Default to `FALSE`.
+#'
+#' @returns Invisible returns `NULL` if the column of the data frame does not
+#'   contain any `NA` values. Otherwise raises an error.
+#'
+#' @keywords internal
+check_column_na <- function(df_val, col, df_name = NULL, is_data = FALSE) {
+  if (is_data) {
+    str1 <- paste0(df_name, "$", col)
+  } else {
+    str1 <- paste0("the field ", col, " of the data")
+  }
+  # check if there are any NA values
+  if (any(is.na(df_val[[col]]))) {
+    cli::cli_abort(paste0("Can't run regressions with NA values in ", str1, "."))
+  }
+  invisible(NULL)
+}
+
+#' Check if the plain variable is compatible for eiger regression
+#'
+#' `check_plain()` checks if the plain variable is compatible for eiger
+#' regression and modifies the order of the elements if the variable is valid.
+#'
+#' @param plain_val The variable to check.
+#' @param plain The name of the variable.
+#' @param tip_labels The tip labels of the phylogenetic tree for eiger
+#'   regression.
+#' @param n_tips The number of tips in the phylogenetic tree. Default to
+#'   `length(tip_labels)`.
+#'
+#' @returns The plain variable with elements re-ordered based on `tip_labels` if
+#'   the variable is valid. Raises error if:
+#' * The variable does not have the same number of elements as the number of tips,
+#' * The variable contains any `NA` values,
+#' * There are redundant names for elements in the variable.
+#'   Raises warning if:
+#' * The names of the variable do not exist,
+#' * The names of the variable do not match the tip labels of the tree.
+#'
+#' @keywords internal
+check_plain <- function(plain_val, plain, tip_labels, n_tips = length(tip_labels)) {
+  plain_len <- length(plain_val)
+  # check if the plain has the same number of elements as the number of tips
+  if (plain_len != n_tips) {
+    cli::cli_abort(c(
+      paste0("The variable ", plain, " must have the same number of elements as the number of tips in the tree."),
+      "i" = paste0("The variable ", plain, " has ", plain_len, " elements."),
+      "i" = paste0("The tree has ", n_tips, " tips.")))
+  }
+  # check if there are any NA values
+  if (any(is.na(plain_val))) {
+    cli::cli_abort(paste0("Can't run regressions with NA values in variable ", plain_val, "."))
+  }
+  # check if there are names for the variable
+  plain_names <- names(plain_val)
+  if (is.null(plain_names)) {
+    cli::cli_warn(c(paste0("The names of variable ", plain, " do not exist."),
+                    "i" = "The order of the elements must be the same as the order of tip labels of the tree."))
+  } else {
+    # check if there are redundant names for the variable
+    if (length(unique(plain_names)) != length(plain_names)) {
+      cli::cli_abort(paste0("The names of variable ", plain, " must be all unique."))
+    }
+    # check if the names are the same as tip labels
+    if (setequal(plain_names, tip_labels)) {
+      plain_val <- plain_val[tip_labels]
+    } else {
+      cli::cli_warn(c(paste0("The variable ", plain, " do not match the tip labels of the tree."),
+                      "i" = "The order of the variable values must be the same as the order of tip labels of the tree."))
+    }
+  }
+  plain_val
+}
+
+#' Check if a response variable is numeric
+#'
+#' `check_numeric_response()` checks if a response variable is numeric.
+#'
+#' @param response_val The response variable to check.
+#' @param response_name The name of the response variable.
+#'
+#' @returns Invisible returns `NULL` if the response variable is numeric.
+#'   Otherwise raises an error.
+#'
+#' @keywords internal
+check_numeric_response <- function(response_val, response_name) {
+  if (!is.numeric(response_val)) {
+    cli::cli_abort(c(paste0("Response variable ", response_name, " must be a numeric vector."),
+                     "x" = "You've supplied a {.cls {class(response_val)}} vector."))
+  }
+  invisible(NULL)
+}
+
 #' Check if the data are compatible for eiger regression and clean the data
 #'
 #' @description `clean_eiger()` checks if the trait values, the phylogenetic
@@ -167,41 +333,14 @@ clean_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x = N
           cli::cli_abort(paste0("Can't find data frame ", df, "."))
         }
         df_val <- get(df, envir = env)
-        # check if the data frame is a valid data frame
-        tryCatch({
-          df_val <- as.data.frame(df_val)
-          df_colnames <- colnames(df_val)
-          df_rownames <- rownames(df_val)
-          df_n_rows <- nrow(df_val)
-        }, error = function(e) {
-          cli::cli_abort(paste0("Can't coerce ", df, " to a data frame."))
-        })
+        df_val <- check_dataframe(df_val, tip_labels, df, FALSE, n_tips)
+        df_colnames <- colnames(df_val)
+
         # check if the data frame has the variable as a column
         if (!field %in% df_colnames) {
           cli::cli_abort(paste0("Can't find column name ", field, " in data frame ", df, "."))
         }
-        # check if the data frame has the same number of rows as the number of tips
-        if (df_n_rows != n_tips) {
-          cli::cli_abort(c(
-            "The data frame must have the same number of rows as the number of tips in the tree.",
-            "i" = paste0("The data frame ", df, " has ", df_n_rows, " rows."),
-            "i" = paste0("The tree has ", n_tips, " tips.")))
-        }
-        # check if there are any NA values
-        if (any(is.na(df_val[[field]]))) {
-          cli::cli_abort(paste0("Can't run regressions with NA values in ", df, "$", field, "."))
-        }
-        # check if there are redundant labels for rows in the data frame
-        if (length(unique(df_rownames)) != length(df_rownames)) {
-          cli::cli_abort(paste0("The row names of data frame ", df, " must be all unique."))
-        }
-        # check if the row names are the same as tip labels
-        if (setequal(df_rownames, tip_labels)) {
-          df_val <- df_val[tip_labels, ]
-        } else {
-           cli::cli_warn(c(paste0("The row names of data frame ", df, " do not match the tip labels of the tree."),
-                          "i" = "The order of the rows must be the same as the order of tip labels of the tree."))
-        }
+        check_column_na(df_val, field, df, FALSE)
         var_name <- paste0(df, "_", field)
         output_df[[var_name]] <- df_val[[field]]
       }
@@ -209,79 +348,21 @@ clean_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x = N
 
     # check the data
     if (!is.null(data)) {
-      # check if the data frame is a valid data frame
-      tryCatch({
-        data <- as.data.frame(data)
-        data_colnames <- colnames(data)
-        data_rownames <- rownames(data)
-        data_n_rows <- nrow(data)
-      }, error = function(e) {
-        cli::cli_abort("Can't coerce the data to a data frame.")
-      })
-      # check if the data has the same number of rows as the number of tips
-      if (data_n_rows != n_tips) {
-        cli::cli_abort(c(
-          "The data must have the same number of rows as the number of tips in the tree.",
-          "i" = paste0("The data has ", data_n_rows, " rows."),
-          "i" = paste0("The tree has ", n_tips, " tips.")))
-      }
-      # check if there are redundant labels for rows in the data=
-      if (length(unique(data_rownames)) != length(data_rownames)) {
-        cli::cli_abort(paste0("The row names of data must be all unique."))
-      }
-      # check if the row names are the same as tip labels
-      if (setequal(data_rownames, tip_labels)) {
-        data <- data[tip_labels, ]
-      } else {
-        cli::cli_warn(c(paste0("The row names of data do not match the tip labels of the tree."),
-                        "i" = "The order of the rows must be the same as the order of tip labels of the tree."))
-      }
+      data <- check_dataframe(data, tip_labels, NULL, TRUE, n_tips)
+      data_colnames <- colnames(data)
+      output_df <- dplyr::bind_cols(data, output_df)
     }
-
-    output_df <- dplyr::bind_cols(data, output_df)
 
     # check the plain variables
     for (plain in plains) {
       # plain variable exists in data
       if (!is.null(data) && plain %in% data_colnames) {
-        # check if there are any NA values
-        if (any(is.na(data[[plain]]))) {
-          cli::cli_abort(paste0("Can't run regressions with NA values in the field ", plain, " of the data."))
-        }
+        check_column_na(data, plain, NULL, TRUE)
       } else {
         # plain variable exists in global env
         if (exists(plain, envir = env)) {
           plain_val <- get(plain, envir = env)
-          plain_len <- length(plain_val)
-          # check if the plain has the same number of elements as the number of tips
-          if (plain_len != n_tips) {
-            cli::cli_abort(c(
-              "The variable must have the same number of elements as the number of tips in the tree.",
-              "i" = paste0("The variable ", plain, " has ", plain_len, " elements."),
-              "i" = paste0("The tree has ", n_tips, " tips.")))
-          }
-          # check if there are any NA values
-          if (any(is.na(plain_val))) {
-            cli::cli_abort(paste0("Can't run regressions with NA values in variable ", plain_val, "."))
-          }
-          # check if there are names for the variable
-          plain_names <- names(plain_val)
-          if (is.null(plain_names)) {
-            cli::cli_warn(c(paste0("The names of variable ", plain, " do not exist."),
-                            "i" = "The order of the elements must be the same as the order of tip labels of the tree."))
-          } else {
-            # check if there are redundant names for the variable
-            if (length(unique(plain_names)) != length(plain_names)) {
-              cli::cli_abort(paste0("The names of variable ", plain, " must be all unique."))
-            }
-            # check if the names are the same as tip labels
-            if (setequal(plain_names, tip_labels)) {
-              plain_val <- plain_val[tip_labels]
-            } else {
-              cli::cli_warn(c(paste0("The variable ", plain, " do not have the same names as the tip labels of the tree."),
-                              "i" = "The order of the variable values must be the same as the order of tip labels of the tree."))
-            }
-          }
+          plain_val <- check_plain(plain_val, plain, tip_labels, n_tips)
           output_df[[plain]] <- plain_val
         } else {
           # plain variable does not exist
@@ -302,12 +383,7 @@ clean_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x = N
       response <- var_1
       response_name <- var_1
     }
-
-    # check if the response variable is numeric
-    if (!is.numeric(output_df[[response]])) {
-      cli::cli_abort(c(paste0("Response variable ", response_name, " must be a numeric vector."),
-                       "x" = "You've supplied a {.cls {class(output_df[[response]])}} vector."))
-    }
+    check_numeric_response(output_df[[response]], response)
   } else {
     # case 2: formula not provided, only use x and y
     # check if both values are provided
@@ -327,68 +403,10 @@ clean_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x = N
       }
     }
 
-    # check if the response variable is numeric
-    if (!is.numeric(y)) {
-      cli::cli_abort(c("{.var y} must be a numeric vector.",
-                       "x" = "You've supplied a {.cls {class(y)}} vector."))
-    }
-    # check if the variables have the same number of elements as the number of tips
-    x_len <- length(x)
-    y_len <- length(y)
-    if (x_len != n_tips) {
-      cli::cli_abort(c(
-        "{.var x} must have the same number of elements as the number of tips in the tree.",
-        "i" = paste0("Variable {.var x} has ", x_len, " elements."),
-        "i" = paste0("The tree has ", n_tips, " tips.")))
-    }
-    if (y_len != n_tips) {
-      cli::cli_abort(c(
-        "{.var y} must have the same number of elements as the number of tips in the tree.",
-        "i" = paste0("Variable {.var y} has ", y_len, " elements."),
-        "i" = paste0("The tree has ", n_tips, " tips.")))
-    }
-    # check if there are any NA values
-    if (any(is.na(x))) {
-      cli::cli_abort("Can't run regressions with NA values in the variable {.var x}.")
-    }
-    if (any(is.na(y))) {
-      cli::cli_abort("Can't run regressions with NA values in the variable {.var y}.")
-    }
-    # check if there are names for x and y
-    x_names <- names(x)
-    if (is.null(x_names)) {
-      cli::cli_warn(c(paste0("The names of variable {.var x} do not exist."),
-                      "i" = "The order of the elements must be the same as the order of tip labels of the tree."))
-    } else {
-      # check if there are redundant names for the variable
-      if (length(unique(x_names)) != length(x_names)) {
-        cli::cli_abort(paste0("The names of variable {.var x} must be all unique."))
-      }
-      # check if the names are the same as tip labels
-      if (setequal(x_names, tip_labels)) {
-        x <- x[tip_labels]
-      } else {
-        cli::cli_warn(c(paste0("The variable {.var x} do not have the same names as the tip labels of the tree."),
-                        "i" = "The order of the variable values must be the same as the order of tip labels of the tree."))
-      }
-      }
-    y_names <- names(y)
-    if (is.null(y_names)) {
-      cli::cli_warn(c(paste0("The names of variable {.var y} do not exist."),
-                             "i" = "The order of the elements must be the same as the order of tip labels of the tree."))
-    } else {
-      # check if there are redundant names for the variable
-      if (length(unique(y_names)) != length(y_names)) {
-          cli::cli_abort(paste0("The names of variable {.var y} must be all unique."))
-        }
-      # check if the names are the same as tip labels
-      if (setequal(y_names, tip_labels)) {
-          y <- y[tip_labels]
-        } else {
-          cli::cli_warn(c(paste0("The variable {.var y} do not have the same names as the tip labels of the tree."),
-                          "i" = "The order of the variable values must be the same as the order of tip labels of the tree."))
-        }
-    }
+    x <- check_plain(x, "{.var x}", tip_labels, n_tips)
+    y <- check_plain(y, "{.var y}", tip_labels, n_tips)
+    check_numeric_response(y, "{.var y}")
+
     output_df <- matrix(0, nrow = n_tips, ncol = 2)
     output_df[, 1] <- x
     output_df[, 2] <- y
