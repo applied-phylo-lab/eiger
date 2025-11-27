@@ -638,22 +638,11 @@ run_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x = NUL
     df_colnames <- colnames(df)
     if (any(!(eigen_names %in% df_colnames))) {
       eigen_idx <- which(!(eigen_names %in% df_colnames))
-      n <- length(eigen_idx)
-      listed <- utils::head(eigen_idx, 5)
-      n_listed <- length(listed)
-
-      bullets <- paste0("Eigenvector ", listed, " is not included in data.")
-      bullets <- stats::setNames(bullets, rep("x", n_listed))
-
-      if (n > 5) {
-        n_extra <- n - 5
-        extra_bullet <- paste0("... and ", n_extra, " more eigenvectors are not included in data.")
-        bullets <- c(bullets, extra_bullet)
-      }
-
-      cli::cli_abort(c(
-        "Can't find all the eigenvectors in the input data.",
-        bullets))
+      top_message <- "Can't find all the eigenvectors in the input data."
+      bullet_prefix <- "Eigenvector "
+      bullet_suffix <- " is not included in data."
+      extra_message <- " more eigenvectors are not included in data."
+      create_bullet_error(eigen_idx, top_message, bullet_prefix, bullet_suffix, extra_message)
     }
   }
 

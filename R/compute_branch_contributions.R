@@ -130,6 +130,45 @@ compute_branch_egrm <- function(x) {
   outer(x_z, x_z)
 }
 
+#' Create and throw an error message that lists the individual problems
+#'
+#' `create_bullet_error()` creates and throws an error message that states the
+#' overall error, lists the individual problems as bullets, and states the
+#' number of extra problems if there are more than five problems.
+#'
+#' @param invalid_items A vector of invalid items that lead to problems.
+#' @param top_message A string representing the overall big issue.
+#' @param bullet_prefix Part of the bullet message that goes before the listed
+#'   variant.
+#' @param bullet_suffix Part of the bullet message that goes after the listed
+#'   variant.
+#' @param extra_message A string stating the number of unlisted problems.
+#'
+#' @returns No return value, always throws an error. The first line of the error
+#'   message states the overal big issue. The next few lines are bullets
+#'   describing the individual problems in order. If there are more than five
+#'   problems, only the first five problems are listed, and an extra line shows
+#'   the number of extra problems not listed in the bullets.
+#'
+#' @keywords internal
+create_bullet_error <- function(invalid_items, top_message, bullet_prefix, bullet_suffix, extra_message) {
+  n <- length(invalid_items)
+  listed <- utils::head(invalid_items, 5)
+  n_listed <- length(listed)
+  cli::cli
+
+  bullets <- paste0(bullet_prefix, listed, bullet_suffix)
+  bullets <- stats::setNames(bullets, rep("x", n_listed))
+
+  if (n > 5) {
+    n_extra <- n - 5
+    extra_bullet <- paste0("... and ", n_extra, extra_message)
+    bullets <- c(bullets, extra_bullet)
+  }
+
+  cli::cli_abort(c(top_message, bullets))
+}
+
 #' Check if a `"Phylo"` object has valid branch lengths
 #'
 #' `check_phylo_branches()` checks if a `"Phylo"` object has defined lengths for
@@ -175,41 +214,19 @@ check_phylo_branches <- function(tree) {
   }
   if (any(is.na(tree$edge.length))) {
     na_idx <- which(is.na(tree$edge.length))
-    n <- length(na_idx)
-    listed <- utils::head(na_idx, 5)
-    n_listed <- length(listed)
-
-    bullets <- paste0("Branch ", listed, " does not have branch length.")
-    bullets <- stats::setNames(bullets, rep("x", n_listed))
-
-    if (n > 5) {
-      n_extra <- n - 5
-      extra_bullet <- paste0("... and ", n_extra, " more branches do not have branch lengths.")
-      bullets <- c(bullets, extra_bullet)
-    }
-
-    cli::cli_abort(c(
-      "Can't find branch lengths for all the branches of the input tree.",
-      bullets))
+    top_message <- "Can't find branch lengths for all the branches of the input tree."
+    bullet_prefix <- "Branch "
+    bullet_suffix <- " does not have branch length."
+    extra_message <- " more branches do not have branch lengths."
+    create_bullet_error(na_idx, top_message, bullet_prefix, bullet_suffix, extra_message)
   }
   if (any(tree$edge.length < 0)) {
     negative_idx <- which(tree$edge.length < 0)
-    n <- length(negative_idx)
-    listed <- utils::head(negative_idx, 5)
-    n_listed <- length(listed)
-
-    bullets <- paste0("Branch ", listed, " has negative branch length.")
-    bullets <- stats::setNames(bullets, rep("x", n_listed))
-
-    if (n > 5) {
-      n_extra <- n - 5
-      extra_bullet <- paste0("... and ", n_extra, " more branches have negative branch lengths.")
-      bullets <- c(bullets, extra_bullet)
-    }
-
-    cli::cli_abort(c(
-      "Branch lengths for all the branches of the input tree must be non-negative.",
-      bullets))
+    top_message <- "Branch lengths for all the branches of the input tree must be non-negative."
+    bullet_prefix <- "Branch "
+    bullet_suffix <- " has negative branch length."
+    extra_message <- " more branches have negative branch lengths."
+    create_bullet_error(negative_idx, top_message, bullet_prefix, bullet_suffix, extra_message)
   }
   invisible(NULL)
 }
@@ -393,23 +410,13 @@ check_dimensions <- function(x, low, high) {
     cli::cli_abort("The input dimensions must be integers.")
   }
   if (any(x < low | x > high)) {
-    error_message <- paste0("The input dimensions must be between ", low, " and ", high, ".")
-
     idx <- which(x < low | x > high)
-    n <- length(idx)
-    listed <- utils::head(idx, 5)
-    n_listed <- length(listed)
-
-    bullets <- paste0("Dimension ", listed, " is not between ", low, " and ", high, ".")
-    bullets <- stats::setNames(bullets, rep("x", n_listed))
-
-    if (n > 5) {
-      n_extra <- n - 5
-      extra_bullet <- paste0("... and ", n_extra, " more dimensions are not between ", low, " and ", high, ".")
-      bullets <- c(bullets, extra_bullet)
-    }
-
-    cli::cli_abort(c(error_message, bullets))
+    common_message <- paste0("between ", low, " and ", high, ".")
+    top_message <- paste0("The input dimensions must be ", common_message)
+    bullet_prefix <- "Dimension "
+    bullet_suffix <- paste0(" is not ", common_message)
+    extra_message <- paste0(" more dimensions are not ", common_message)
+    create_bullet_error(idx, top_message, bullet_prefix, bullet_suffix, extra_message)
   }
   invisible(NULL)
 }

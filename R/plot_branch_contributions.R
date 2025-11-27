@@ -89,22 +89,11 @@ create_color_palette <- function(color_scheme = NULL, n_colors = 100) {
         color_palette <- grDevices::colorRampPalette(color_scheme)(n_colors)
       }, error = function(e) {
         invalid_colors <- color_scheme[!sapply(color_scheme, check_valid_color)]
-        n <- length(invalid_colors)
-        listed <- utils::head(invalid_colors, 5)
-        n_listed <- length(listed)
-
-        bullets <- paste0("Can't find color name '", listed, "'.")
-        bullets <- stats::setNames(bullets, rep("x", n_listed))
-
-        if (n > 5) {
-          n_extra <- n - 5
-          extra_bullet <- paste0("... and ", n_extra, " more color names can't be found.")
-          bullets <- c(bullets, extra_bullet)
-        }
-
-        cli::cli_abort(c(
-          "The input list of colors must all represent valid colors.",
-          bullets))
+        top_message <- "The input list of colors must all represent valid colors."
+        bullet_prefix <- "Can't find color name '"
+        bullet_suffix <- "'."
+        extra_message <- " more color names can't be found."
+        create_bullet_error(invalid_colors, top_message, bullet_prefix, bullet_suffix, extra_message)
         })
     } else {
       error_message <- paste0("Can't find color-generating function '",
