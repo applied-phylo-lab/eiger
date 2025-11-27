@@ -1,3 +1,15 @@
+# check_list() passes for bad but valid inputs
+
+    Code
+      ls6_result <- check_list(ls6, "ls6")
+    Condition
+      Warning:
+      The data list ls6 contains fields that do not have names.
+      i The names for the first field of the data list ls6 that has names will be used.
+      Warning:
+      The data list ls6 do not have the same names across different fields.
+      i The names for the first field of the data list ls6 that has names will be used.
+
 # clean_eiger() passes and raises warnings for valid but bad inputs
 
     Code

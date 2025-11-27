@@ -28,13 +28,35 @@ for the regression, otherwise \code{FALSE}. Default to \code{FALSE}.}
 }
 \value{
 The data frame with rows re-ordered based on \code{tip_labels} if the
-data frame is valid. Raises error if:
+data frame is valid. If the data frame is provided in terms of a list, the
+list has values of each field re-ordered and names imputed based on the
+first field in the list that has names before being coerced to data frame.
+Raises error if:
 \itemize{
 \item The data frame cannot be coerced to a valid data frame,
 \item The data frame does not have the same number of rows as the number of tips,
-\item There are redundant labels for rows in the data frame.
-Raises warning if the row names of the data frame do not match the tip
-labels.
+\item There are columns with no labels in the data frame,
+\item There are redundant labels for columns in the data frame,
+\item When the data frame is provided in terms of a list:
+\itemize{
+\item The list is empty,
+\item The fields in the list do not all have the same lengths,
+\item The list contains fields that do not have tags,
+\item The tags of the fields in the list are not all unique,
+\item The list contains fields that have NA values in names,
+\item The list contains fields that have redundant names.
+Raises warning if:
+}
+\item The row names of the data frame do not match the tip labels,
+\item When the data frame is provided in terms of a list:
+\itemize{
+\item There are fields in the list that have no names,
+\itemize{
+\item If none of the fields has names, the fields will remain having no names,
+\item If only some of the fields have no names, these fields will take the names of the first field in the list that has names,
+}
+\item The fields in the list do have have the same set of names, in which case the fields will all will take the names of the first field in the list that has names.
+}
 }
 }
 \description{

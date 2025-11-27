@@ -82,14 +82,25 @@ values of \link[phylolm:phylolm]{phylolm::phylolm}. Raises error if:
 \itemize{
 \item The data frame does not exist in the current environment or the variable is not a column of that data frame,
 \item The number of rows of the data frame is not equal to the number of tips in \code{tree},
-\item There are redundant row names in the data frame if row names exist,
+\item There are columns with no names in the data frame,
+\item There are redundant column names in the data frame,
 }
 }
 \item When \code{data} is supplied:
 \itemize{
 \item \code{data} can't be coerced to a valid data frame,
 \item The number of rows of \code{data} is not equal to the number of tips in \code{tree},
-\item There are redundant row names in \code{data} if row names exist,
+\item There are columns with no names in \code{data},
+\item There are redundant column names in \code{data},
+}
+\item When \code{data} or other data frames used are provided in terms of a list:
+\itemize{
+\item The list is empty,
+\item The fields in the list do not all have the same lengths,
+\item Some fields in the list have no tags,
+\item The tags of the fields in the list are not all unique,
+\item The list contains fields that have NA values in names,
+\item The list contains fields that have redundant names,
 }
 \item When \code{prepared} is \code{TRUE}:
 \itemize{
@@ -107,6 +118,15 @@ Raises a warning if:
 \item The row names of \code{data} are not equal to the tip labels of \code{tree},
 \item A variable in \code{formula} is a vector found in the current environment and either don't have names or have names not equal to the tip labels of \code{tree},
 \item A variable in \code{formula} is column of a data frame found in the current environment and the row names of the data frame are not equal to the tip labels of \code{tree}.
+\item When \code{data} or other data frames used are provided in terms of a list:
+\itemize{
+\item There are fields in the list that have no names,
+\itemize{
+\item If none of the fields has names, the fields will remain having no names,
+\item If only some of the fields have no names, these fields will take the names of the first field in the list that has names,
+}
+\item The fields in the list do have have the same set of names, in which case the fields will all will take the names of the first field in the list that has names.
+}
 }
 }
 \description{

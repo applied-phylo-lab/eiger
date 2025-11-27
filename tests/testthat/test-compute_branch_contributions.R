@@ -170,6 +170,29 @@ test_that("compute_branch_egrm() passes for long valid binary vectors", {
   }
 })
 
+test_that("create_bullet_error() generates the correct error messages", {
+  top_message <- "Can't find branch lengths for all the branches of the input tree."
+  bullet_prefix <- "Branch "
+  bullet_suffix <- " does not have branch length."
+  extra_message <- " more branches do not have branch lengths."
+
+  idx <- 1
+  expect_snapshot(create_bullet_error(idx, top_message, bullet_prefix, bullet_suffix, extra_message), error = TRUE)
+
+  idx <- 2:3
+  expect_snapshot(create_bullet_error(idx, top_message, bullet_prefix, bullet_suffix, extra_message), error = TRUE)
+
+  idx <- 1:10
+  expect_snapshot(create_bullet_error(idx, top_message, bullet_prefix, bullet_suffix, extra_message), error = TRUE)
+
+  idx <- c(1, 3, 4)
+  expect_snapshot(create_bullet_error(idx, top_message, bullet_prefix, bullet_suffix, extra_message), error = TRUE)
+
+  idx <- c(1, 3, 4, 9, 11, 20, 35)
+  expect_snapshot(create_bullet_error(idx, top_message, bullet_prefix, bullet_suffix, extra_message), error = TRUE)
+})
+
+
 test_that("check_phylo_branches() passes for valid input trees", {
   yule_tree <- withr::with_seed(17, TreeSim::sim.bd.taxa(4, 1, 1, 0, 1, complete = FALSE)[[1]])
   expect_silent(check_phylo_branches(yule_tree))

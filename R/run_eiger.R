@@ -42,6 +42,125 @@ parse_formula <- function(formula) {
   list(dfs = dfs, fields = fields, plains = plains)
 }
 
+#' Check if the list can be coerced to a valid data frame
+#'
+#' `check_list()` checks if the list can be coerced to a valid data frame with
+#' and modifies the names for the fields if the data frame is valid.
+#'
+#' @param list_val The list to check.
+#' @param list_name The name of the list. Default to `NULL`.
+#' @param is_data A boolean. `TRUE` if the list is the data argument used for
+#'   the regression, otherwise `FALSE`. Default to `FALSE`.
+#'
+#' @returns The list with values of each field re-ordered and names imputed
+#'   based on the first field in the list that has names if the list is valid.
+#'   Raises error if:
+#' * The list is empty,
+#' * The fields in the list do not all have the same lengths,
+#' * The list contains fields that do not have tags,
+#' * The tags of the fields in the list are not all unique,
+#' * The list contains fields that have NA values in names,
+#' * The list contains fields that have redundant names.
+#'   Raises warning if:
+#' * There are fields in the list that have no names,
+#'     * If none of the fields has names, the fields will remain having no names,
+#'     * If only some of the fields have no names, these fields will take the names of the first field in the list that has names,
+#' * The fields in the list do have have the same set of names, in which case the fields will all will take the names of the first field in the list that has names.
+#'
+#' @keywords internal
+check_list <- function(list_val, list_name = NULL, is_data = FALSE) {
+  if (is_data) {
+    str1 <- "the data"
+    str2 <- "The data"
+  } else {
+    str1 <- paste0("the data list ", list_name)
+    str2 <- paste0("The data list ", list_name)
+  }
+
+  # check if the list is empty
+  if (length(list_val) == 0) {
+    cli::cli_abort(paste0(str2, " must not be empty."))
+  }
+  # check if the fields have the same lengths
+  lengths_list <- sapply(list_val, length)
+  if (length(unique(lengths_list)) != 1) {
+    cli::cli_abort(paste0("Can't find a unique length for all the fields in ", str1, "."))
+  }
+
+  # check if there are fields with no tags
+  field_tags <- names(list_val)
+  if (is.null(field_tags)) {
+    cli::cli_abort(paste0("Can't find any tags for ", str1, "."))
+  }
+  if (any(field_tags == "") || any(is.na(field_tags))) {
+    tag_idx <- which(field_tags == "" | is.na(field_tags))
+    top_message <- paste0("Can't find the tags for all the fields in ", str2, ".")
+    bullet_prefix <- "The tag for field "
+    bullet_suffix <- " can't be found."
+    extra_message <- paste0(" more fields in ", str2, " do not have tags.")
+    create_bullet_error(tag_idx, top_message, bullet_prefix, bullet_suffix, extra_message)
+  }
+  # check if there are redundant tags
+  if (anyDuplicated(field_tags) > 0) {
+    cli::cli_abort(paste0("The tags of the fields in ", str1, " must all be unique."))
+  }
+
+  # check if there are fields with no names
+  field_rownames_list <- lapply(list_val, names)
+  field_rownames_null <- sapply(field_rownames_list, is.null)
+  if (all(field_rownames_null)) {
+    cli::cli_warn(c(paste0(str2, " contains no fields that have names."),
+                    "i" = "The order of the values for each field must be the same as the order of tip labels of the tree."))
+    return(list_val)
+  } else {
+    if (any(field_rownames_null)) {
+      cli::cli_warn(c(paste0(str2, " contains fields that do not have names."),
+                      "i" = paste0("The names for the first field of ", str1, " that has names will be used.")))
+      first_not_null_idx <- which(!field_rownames_null)[1]
+      first_not_null_rownames <- field_rownames_list[[first_not_null_idx]]
+      for (i in which(field_rownames_null)) {
+        names(list_val[[i]]) <- first_not_null_rownames
+      }
+    }
+  }
+  # check if there are fields with redundant (row) names or NA in names
+  n_fields <- length(field_tags)
+  for (i in 1:n_fields) {
+    field_tag <- field_tags[i]
+    field_rownames <- field_rownames_list[[i]]
+    if (any(is.na(field_rownames))) {
+      cli::cli_abort(c(paste0("The names for each field in ", str1, " must not contain NA values."),
+                       "x" = paste0("The names for field ", field_tag, " contains NA values.")))
+    }
+    if (anyDuplicated(field_rownames) > 0) {
+      cli::cli_abort(c(paste0("The names for each field in ", str1, " must all be unique."),
+                       "x" = paste0("The names for field ", field_tag, " are not all unique.")))
+    }
+  }
+  # check if all the fields have the same set of (row) names
+  if (n_fields >= 2) {
+    field_rownames_list <- lapply(list_val, names)
+    field_1_rownames <- field_rownames_list[[1]]
+    field_rownames_all_same <- TRUE
+    for (i in 2:n_fields) {
+      field_tag <- field_tags[i]
+      field_rownames <- field_rownames_list[[i]]
+      field_rownames_same <- setequal(field_1_rownames, field_rownames)
+      field_rownames_all_same <- field_rownames_all_same && field_rownames_same
+      if (!field_rownames_same) {
+        names(list_val[[i]]) <- field_1_rownames
+      } else {
+        list_val[[i]] <- list_val[[i]][field_1_rownames]
+      }
+    }
+    if (!field_rownames_all_same) {
+      cli::cli_warn(c(paste0(str2, " do not have the same names across different fields."),
+                      "i" = paste0("The names for the first field of ", str1, " that has names will be used.")))
+    }
+  }
+  list_val
+}
+
 #' Check if the data frame is compatible for eiger regression
 #'
 #' `check_dataframe()` checks if the data frame is compatible for eiger
@@ -57,12 +176,28 @@ parse_formula <- function(formula) {
 #'   `length(tip_labels)`.
 #'
 #' @returns The data frame with rows re-ordered based on `tip_labels` if the
-#'   data frame is valid. Raises error if:
+#'   data frame is valid. If the data frame is provided in terms of a list, the
+#'   list has values of each field re-ordered and names imputed based on the
+#'   first field in the list that has names before being coerced to data frame.
+#'   Raises error if:
 #' * The data frame cannot be coerced to a valid data frame,
 #' * The data frame does not have the same number of rows as the number of tips,
-#' * There are redundant labels for rows in the data frame.
-#'   Raises warning if the row names of the data frame do not match the tip
-#'   labels.
+#' * There are columns with no labels in the data frame,
+#' * There are redundant labels for columns in the data frame,
+#' * When the data frame is provided in terms of a list:
+#'     * The list is empty,
+#'     * The fields in the list do not all have the same lengths,
+#'     * The list contains fields that do not have tags,
+#'     * The tags of the fields in the list are not all unique,
+#'     * The list contains fields that have NA values in names,
+#'     * The list contains fields that have redundant names.
+#'   Raises warning if:
+#' * The row names of the data frame do not match the tip labels,
+#' * When the data frame is provided in terms of a list:
+#'     * There are fields in the list that have no names,
+#'         * If none of the fields has names, the fields will remain having no names,
+#'         * If only some of the fields have no names, these fields will take the names of the first field in the list that has names,
+#'     * The fields in the list do have have the same set of names, in which case the fields will all will take the names of the first field in the list that has names.
 #'
 #' @keywords internal
 check_dataframe <- function(df_val, tip_labels, df_name = NULL, is_data = FALSE, n_tips = length(tip_labels)) {
@@ -75,15 +210,24 @@ check_dataframe <- function(df_val, tip_labels, df_name = NULL, is_data = FALSE,
     str2 <- paste0("The data frame ", df_name)
     str3 <- paste0("the data frame ", df_name)
   }
+  # deal with lists, as the names for each field can be tricky
+  if (is.list(df_val) && identical(class(df_val), "list")) {
+    df_val <- check_list(df_val, df_name, is_data)
+  }
   # check if the data frame is a valid data frame
   tryCatch({
     df_val <- as.data.frame(df_val)
     df_colnames <- colnames(df_val)
     df_rownames <- rownames(df_val)
     df_n_rows <- nrow(df_val)
+    df_n_cols <- ncol(df_val)
   }, error = function(e) {
     cli::cli_abort(paste0("Can't coerce ", str1, " to a data frame."))
   })
+  # check if the data frame is empty
+  if (df_n_rows == 0 || df_n_cols == 0) {
+    cli::cli_abort(paste0(str2, " must not be empty."))
+  }
   # check if the data frame has the same number of rows as the number of tips
   if (df_n_rows != n_tips) {
     cli::cli_abort(c(
@@ -91,17 +235,32 @@ check_dataframe <- function(df_val, tip_labels, df_name = NULL, is_data = FALSE,
       "i" = paste0(str2, " has ", df_n_rows, " rows."),
       "i" = paste0("The tree has ", n_tips, " tips.")))
   }
-  # check if there are redundant labels for rows in the data frame
-  if (length(unique(df_rownames)) != length(df_rownames)) {
-    cli::cli_abort(paste0("The row names of ", str3, " must be all unique."))
-  }
   # check if the row names are the same as tip labels
   if (setequal(df_rownames, tip_labels)) {
     df_val <- df_val[tip_labels, ]
   } else {
     cli::cli_warn(c(paste0("The row names of ", str3, " do not match the tip labels of the tree."),
                     "i" = "The order of the rows must be the same as the order of tip labels of the tree."))
+    rownames(df_val) <- tip_labels
   }
+
+  # check if there are column names
+  if (is.null(df_colnames)) {
+    cli::cli_abort(paste0("Can't find column names for ", str3, "."))
+  }
+  if (any(df_colnames == "") || any(is.na(df_colnames))) {
+    col_idx <- which(df_colnames == "" | is.na(df_colnames))
+    top_message <- paste0("Can't find the names for all the columns in ", str3, ".")
+    bullet_prefix <- "The name for column "
+    bullet_suffix <- " can't be found."
+    extra_message <- paste0(" more columns in ", str3, " do not have names.")
+    create_bullet_error(col_idx, top_message, bullet_prefix, bullet_suffix, extra_message)
+  }
+  # check if there are redundant column names
+  if (anyDuplicated(df_colnames) > 0) {
+    cli::cli_abort(paste0("The column names in ", str3, " must all be unique."))
+  }
+
   df_val
 }
 
@@ -211,11 +370,11 @@ check_numeric_response <- function(response_val, response_name) {
 #' Check if the data are compatible for eiger regression and clean the data
 #'
 #' @description `clean_eiger()` checks if the trait values, the phylogenetic
-#' tree, and the number of eigenvectors to include in the regression are
-#' compatible with each other and prepares a clean data frame for running eiger
-#' regression.
+#'   tree, and the number of eigenvectors to include in the regression are
+#'   compatible with each other and prepares a clean data frame for running
+#'   eiger regression.
 #'
-#' To build the regression model, users can either provide:
+#'   To build the regression model, users can either provide:
 #' * The predictor and outcome variables `x` and `y`.
 #' * `formula` (and `data`).
 #'
@@ -240,7 +399,10 @@ check_numeric_response <- function(response_val, response_name) {
 #'   and "Y"; if `formula` is used, the output data frame contains `(m + k)`
 #'   columns, where `m` is the number of columns of `data` and `k` is the number
 #'   of additional variables defined in `formula` but not found in `data`. The
-#'   rows are ordered according to the order of tip labels in `tree`. No errors
+#'   rows are ordered according to the order of tip labels in `tree`. If `data`
+#'   or any other data frame used is provided in terms of a list, the list has
+#'   values of each field re-ordered and names imputed based on the first field
+#'   in the list that has names before being coerced to data frame. No errors
 #'   raised if all the following requirements are met:
 #'   * The input `tree` is a valid object of class `"phylo"`,
 #'   * The input `tree` has all branch lengths defined and non-negative,
@@ -261,11 +423,20 @@ check_numeric_response <- function(response_val, response_name) {
 #'        * If a variable in `formula` is a field of some other data frame:
 #'             * The data frame exists in the current environment and the variable is a column of that data frame,
 #'             * The number of rows of the data frame is equal to the number of tips in `tree`,
-#'             * There are no redundant row names in the data frame if row names exist,
+#'             * All columns have names in the data frame,
+#'             * There are no redundant column names in the data frame,
 #'   * If `data` is supplied:
 #'        * `data` can be coerced to a valid data frame,
 #'        * The number of rows of `data` is equal to the number of tips in `tree`,
-#'        * There are no redundant row names in `data` if row names exist.
+#'        * All columns have names in `data`,
+#'        * There are no redundant column names in `data`,
+#'   * When `data` or other data frames used are provided in terms of a list:
+#'        * The list is not empty,
+#'        * The fields in the list all have the same lengths,
+#'        * All the fields in the list has tags,
+#'        * The tags of the fields in the list are all unique,
+#'        * The list does not contain fields that have NA values in names,
+#'        * The list does not contain fields that have redundant names.
 #'   Otherwise raises an error.
 #'
 #'   Raises a warning if:
@@ -273,6 +444,11 @@ check_numeric_response <- function(response_val, response_name) {
 #'   * The row names of `data` are not equal to the tip labels of `tree`,
 #'   * A variable in `formula` is a vector found in the current environment and either don't have names or have names not equal to the tip labels of `tree`,
 #'   * A variable in `formula` is column of a data frame found in the current environment and the row names of the data frame are not equal to the tip labels of `tree`.
+#'   * When `data` or other data frames used are provided in terms of a list:
+#'       * There are fields in the list that have no names,
+#'           * If none of the fields has names, the fields will remain having no names,
+#'           * If only some of the fields have no names, these fields will take the names of the first field in the list that has names,
+#'       * The fields in the list do have have the same set of names, in which case the fields will all will take the names of the first field in the list that has names.
 #'
 #' @examples
 #' \dontrun{
@@ -420,11 +596,11 @@ clean_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x = N
 #' Prepare the data frame for running eiger regression
 #'
 #' @description `prepare_eiger()` constructs a data frame that is essential for
-#' running eiger regression. The data frame includes all the original data
-#' provided for the regression as well as the eigenvectors of the
-#' variance-covariance matrix.
+#'   running eiger regression. The data frame includes all the original data
+#'   provided for the regression as well as the eigenvectors of the
+#'   variance-covariance matrix.
 #'
-#' Users can either provide:
+#'   Users can either provide:
 #' * The predictor and outcome variables `x` and `y`.
 #' * `formula` and `data`.
 #'
@@ -442,7 +618,10 @@ clean_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x = N
 #'   are the additional variables defined in `formula` but not found in `data`,
 #'   and the last `n` columns represent the `n` eigenvectors of the
 #'   variance-covariance matrix. The rows are ordered according to the order of
-#'   tip labels in `tree`. No errors raised if all the following requirements
+#'   tip labels in `tree`. If `data` or any other data frame used is provided in
+#'   terms of a list, the list has values of each field re-ordered and names
+#'   imputed based on the first field in the list that has names before being
+#'   coerced to data frame. No errors raised if all the following requirements
 #'   are met:
 #'   * The input `tree` is a valid object of class `"phylo"`,
 #'   * The input `tree` has all branch lengths defined and non-negative,
@@ -463,11 +642,20 @@ clean_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x = N
 #'        * If a variable in `formula` is a field of some other data frame:
 #'             * The data frame exists in the current environment and the variable is a column of that data frame,
 #'             * The number of rows of the data frame is equal to the number of tips in `tree`,
-#'             * There are no redundant row names in the data frame if row names exist,
+#'             * All columns have names in the data frame,
+#'             * There are no redundant column names in the data frame,
 #'   * If `data` is supplied:
 #'        * `data` can be coerced to a valid data frame,
 #'        * The number of rows of `data` is equal to the number of tips in `tree`,
-#'        * There are no redundant row names in `data` if row names exist.
+#'        * All columns have names in `data`,
+#'        * There are no redundant column names in `data`,
+#'   * When `data` or other data frames used are provided in terms of a list:
+#'        * The list is not empty,
+#'        * The fields in the list all have the same lengths,
+#'        * All the fields in the list has tags,
+#'        * The tags of the fields in the list are all unique,
+#'        * The list does not contain fields that have NA values in names,
+#'        * The list does not contain fields that have redundant names.
 #'   Otherwise raises an error.
 #'
 #'   Raises a warning if:
@@ -475,6 +663,11 @@ clean_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x = N
 #'   * The row names of `data` are not equal to the tip labels of `tree`,
 #'   * A variable in `formula` is a vector found in the current environment and either don't have names or have names not equal to the tip labels of `tree`,
 #'   * A variable in `formula` is column of a data frame found in the current environment and the row names of the data frame are not equal to the tip labels of `tree`.
+#'   * When `data` or other data frames used are provided in terms of a list:
+#'       * There are fields in the list that have no names,
+#'           * If none of the fields has names, the fields will remain having no names,
+#'           * If only some of the fields have no names, these fields will take the names of the first field in the list that has names,
+#'       * The fields in the list do have have the same set of names, in which case the fields will all will take the names of the first field in the list that has names.
 #'
 #' @examples
 #' set.seed(42)
@@ -564,11 +757,20 @@ prepare_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x =
 #'        * When a variable in `formula` is a field of some other data frame:
 #'             * The data frame does not exist in the current environment or the variable is not a column of that data frame,
 #'             * The number of rows of the data frame is not equal to the number of tips in `tree`,
-#'             * There are redundant row names in the data frame if row names exist,
+#'             * There are columns with no names in the data frame,
+#'             * There are redundant column names in the data frame,
 #'   * When `data` is supplied:
 #'        * `data` can't be coerced to a valid data frame,
 #'        * The number of rows of `data` is not equal to the number of tips in `tree`,
-#'        * There are redundant row names in `data` if row names exist,
+#'        * There are columns with no names in `data`,
+#'        * There are redundant column names in `data`,
+#'   * When `data` or other data frames used are provided in terms of a list:
+#'        * The list is empty,
+#'        * The fields in the list do not all have the same lengths,
+#'        * Some fields in the list have no tags,
+#'        * The tags of the fields in the list are not all unique,
+#'        * The list contains fields that have NA values in names,
+#'        * The list contains fields that have redundant names,
 #'   * When `prepared` is `TRUE`:
 #'        * `data` does not exist,
 #'        * `data` does not contain all the variables in `formula`,
@@ -581,6 +783,11 @@ prepare_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x =
 #'   * The row names of `data` are not equal to the tip labels of `tree`,
 #'   * A variable in `formula` is a vector found in the current environment and either don't have names or have names not equal to the tip labels of `tree`,
 #'   * A variable in `formula` is column of a data frame found in the current environment and the row names of the data frame are not equal to the tip labels of `tree`.
+#'   * When `data` or other data frames used are provided in terms of a list:
+#'       * There are fields in the list that have no names,
+#'           * If none of the fields has names, the fields will remain having no names,
+#'           * If only some of the fields have no names, these fields will take the names of the first field in the list that has names,
+#'       * The fields in the list do have have the same set of names, in which case the fields will all will take the names of the first field in the list that has names.
 #'
 #' @examples
 #' set.seed(42)

@@ -30,6 +30,220 @@ test_that("parse_formula() passes for valid formulas", {
   expect_true(setequal(f6$plains, c("I", "y", "log")))
 })
 
+test_that("check_list() passes for good inputs", {
+  x <- 1:20
+  names(x) <- paste0("tip_", 1:20)
+  y <- 21:40
+  names(y) <- paste0("tip_", 1:20)
+  z <- 31:50
+  names(z) <- paste0("tip_", 1:20)
+  ls1 <- list(x = x, y = y, z = z)
+  ls1_result <- check_list(ls1, "ls1", FALSE)
+  expect_equal(ls1_result, ls1)
+
+  ls2 <- list(x = x)
+  ls2_result <- check_list(ls2, NULL, TRUE)
+  expect_equal(ls2_result, ls2)
+
+  y <- 40:21
+  names(y) <- paste0("tip_", 20:1)
+  z <- withr::with_seed(42, sample(z))
+  names(z) <- paste0("tip_", (z - 30))
+  ls3 <- list(x = x, y = y, z = z)
+  ls3_result <- check_list(ls3, "ls3", FALSE)
+  expect_equal(ls3_result, ls1)
+})
+
+test_that("check_list() passes for bad but valid inputs", {
+  x <- 1:20
+  y <- 21:40
+  z <- 31:50
+  ls1 <- list(x = x, y = y, z = z)
+  expect_warning(ls1_result <- check_list(ls1, "ls1", FALSE), "no fields")
+  expect_equal(ls1_result, ls1)
+
+  x_named <- x
+  names(x_named) <- paste0("tip_", 1:20)
+  y_named <- y
+  names(y_named) <- paste0("tip_", 1:20)
+  z_named <- z
+  names(z_named) <- paste0("tip_", 1:20)
+  ls2 <- list(x = x_named, y = y_named, z = z_named)
+
+  names(y) <- paste0("tip_", 1:20)
+  ls3 <- list(x = x, y = y, z = z)
+  expect_warning(ls3_result <- check_list(ls3, "ls3", FALSE), "not have names")
+  expect_equal(ls3_result, ls2)
+
+  z <- withr::with_seed(17, sample(z))
+  names(z) <- paste0("tip_", (z - 30))
+  ls4 <- list(x = x, y = y, z = z)
+  expect_warning(ls4_result <- check_list(ls4, "ls4"), "not have names")
+  expect_equal(ls4_result, ls2)
+
+  names(x) <- paste0("tip_", 1:20)
+  names(y) <- paste0("tip_", z)
+  ls5 <- list(x = x, y = y, z = z)
+  expect_warning(ls5_result <- check_list(ls5, NULL, TRUE), "have the same names")
+  expect_equal(ls5_result, ls2)
+
+  names(x) <- NULL
+  names(y) <- paste0("tip_", 1:20)
+  z <- 31:50
+  names(z) <- paste0("tip_", z)
+  ls6 <- list(x = x, y = y, z = z)
+  expect_snapshot(ls6_result <- check_list(ls6, "ls6"))
+  expect_equal(ls6_result, ls2)
+})
+
+test_that("check_list() fails for invalid inputs", {
+  ls0 <- list()
+  expect_error(check_list(ls0, "ls0", FALSE), "empty")
+
+  x <- 1:10
+  y <- 1:20
+  ls1 <- list(x = x, y = y)
+  expect_error(check_list(ls1, "ls1"), "unique length")
+
+  x <- 11:30
+  ls2 <- list(x, y)
+  expect_error(check_list(ls2, NULL, TRUE), "find any tags")
+  ls3 <- list(x = x, y)
+  expect_error(check_list(ls3, NULL, TRUE), "find the tags")
+
+  ls4 <- list(x = x, x = y)
+  expect_error(check_list(ls4, NULL, TRUE), "tags.*unique")
+
+  names(x) <- paste0("tip_", 1:20)
+  names(y) <- paste0("tip_", c(1:18, 4, 9))
+  ls5 <- list(x = x, y = y)
+  expect_error(check_list(ls5, "ls5", FALSE), "names.*unique")
+  names(x) <- paste0("tip_", c(1:19, 17))
+  ls6 <- list(x = x, y = y)
+  expect_error(check_list(ls6, "ls6", FALSE), "names.*unique")
+
+  names(x) <- paste0("tip_", 1:20)
+  names(y) <- c(paste0("tip_", c(1:19)), NA)
+  ls7 <- list(x = x, y = y)
+  expect_error(check_list(ls7, "ls7", FALSE), "NA")
+
+  names(x) <- c(NA, paste0("tip_", 2:20))
+  ls8 <- list(x = x, y = y)
+  expect_error(check_list(ls8, "ls8"), "NA")
+})
+
+test_that("check_dataframe() passes for good inputs", {
+  tip_labels <- paste0("tip_", 1:20)
+  df1 <- data.frame(x = 1:20, y = 21:40, z = 31:50, row.names = tip_labels)
+
+  df1_result <- check_dataframe(df1, tip_labels, "df1", FALSE, 20)
+  expect_equal(df1_result, df1)
+  df1_result <- check_dataframe(df1, tip_labels, "df1", FALSE)
+  expect_equal(df1_result, df1)
+  df1_result <- check_dataframe(df1, tip_labels, NULL, TRUE, 20)
+  expect_equal(df1_result, df1)
+  df1_result <- check_dataframe(df1, tip_labels, NULL, TRUE)
+  expect_equal(df1_result, df1)
+
+  df2_rownames <- paste0("tip_", 20:1)
+  df2 <- data.frame(x = 20:1, y = 40:21, z = 50:31, row.names = df2_rownames)
+  df2_result <- check_dataframe(df2, tip_labels, "df2", FALSE)
+  expect_equal(df2_result, df1)
+
+  x <- 1:20
+  names(x) <- tip_labels
+  y <- 21:40
+  names(y) <- tip_labels
+  z <- 31:50
+  names(z) <- tip_labels
+  ls1 <- list(x = x, y = y, z = z)
+  ls1_result <- check_dataframe(ls1, tip_labels, "ls1", FALSE)
+  expect_equal(ls1_result, df1)
+
+  y <- 40:21
+  names(y) <- paste0("tip_", 20:1)
+  z <- withr::with_seed(42, sample(z))
+  names(z) <- paste0("tip_", (z - 30))
+  ls2 <- list(x = x, y = y, z = z)
+  ls2_result <- check_dataframe(ls2, tip_labels, "ls2")
+  expect_equal(ls2_result, df1)
+
+  y <- 21:40
+  z <- 31:50
+  M1 <- matrix(c(x, y, z), nrow = 20, ncol = 3, byrow = FALSE,
+               dimnames = list(tip_labels, c("x", "y", "z")))
+  M1_result <- check_dataframe(M1, tip_labels, "M1")
+  expect_equal(M1_result, df1)
+})
+
+test_that("check_dataframe() passes for bad but valid inputs", {
+  tip_labels <- paste0("tip_", 1:20)
+  df1 <- data.frame(x = 1:20, y = 21:40, z = 31:50, row.names = tip_labels)
+
+  df2_rownames <- paste0("tip_", 21:40)
+  df2 <- data.frame(x = 1:20, y = 21:40, z = 31:50, row.names = df2_rownames)
+  expect_warning(df2_result <- check_dataframe(df2, tip_labels, "df2", FALSE), "match the tip labels")
+  expect_equal(df2_result, df1)
+
+  df3 <- data.frame(x = 1:20, y = 21:40, z = 31:50)
+  expect_warning(df3_result <- check_dataframe(df3, tip_labels, "df3"), "match the tip labels")
+  expect_equal(df3_result, df1)
+
+  x <- 1:20
+  y <- 21:40
+  z <- 31:50
+  names(y) <- tip_labels
+  z <- withr::with_seed(17, sample(z))
+  names(z) <- paste0("tip_", (z - 30))
+  ls1 <- list(x = x, y = y, z = z)
+  expect_warning(ls1_result <- check_dataframe(ls1, tip_labels, "ls1"), "not have names")
+  expect_equal(ls1_result, df1)
+
+  names(x) <- paste0("tip_", 1:20)
+  names(y) <- paste0("tip_", z)
+  ls2 <- list(x = x, y = y, z = z)
+  expect_warning(ls2_result <- check_dataframe(ls2, tip_labels, "ls2"), "have the same names")
+  expect_equal(ls2_result, df1)
+
+  M1 <- matrix(c(1:20, 21:40, 31:50), nrow = 20, ncol = 3, byrow = FALSE)
+  colnames(M1) <- c("x", "y", "z")
+  expect_warning(M1_result <- check_dataframe(M1, tip_labels, NULL, TRUE), "match the tip labels")
+  expect_equal(M1_result, df1)
+})
+
+test_that("check_dataframe() fails for invalid inputs", {
+  tip_labels <- paste0("tip_", 1:20)
+  x <- 1:20
+  y <- 21:40
+  z <- 31:50
+
+  ls1 <- list(x, y = y)
+  expect_error(check_dataframe(ls1, tip_labels, NULL, TRUE), "find the tags")
+
+  M0 <- matrix(nrow = 0, ncol = 10)
+  expect_error(check_dataframe(M0, tip_labels, "M0", FALSE), "empty")
+  M0 <- matrix(nrow = 20, ncol = 0)
+  expect_error(check_dataframe(M0, tip_labels, "M0", FALSE), "empty")
+
+  M1 <- matrix(nrow = 30, ncol = 10)
+  expect_error(check_dataframe(M1, tip_labels, "M1", FALSE), "number of tips")
+  expect_error(check_dataframe(M1, tip_labels, "M1", FALSE, 20), "number of tips")
+
+  M2 <- matrix(nrow = 20, ncol = 5)
+  rownames(M2) <- tip_labels
+  df1 <- as.data.frame(M2)
+  colnames(df1) <- NULL
+  expect_error(check_dataframe(df1, tip_labels, "df1", FALSE), "find column names")
+
+  colnames(df1) <- c(NA, "x", "", "y", "z")
+  expect_error(check_dataframe(df1, tip_labels, "df1", FALSE), "all the columns")
+
+  colnames(df1) <- c("a", "x", "z", "y", "z")
+  expect_error(check_dataframe(df1, tip_labels, "df1", FALSE), "column.*unique")
+
+})
+
+
 test_that("clean_eiger() passes for good inputs", {
   s1 <- ape::stree(10, type = "star")
   s2 <- ape::stree(10, type = "star")

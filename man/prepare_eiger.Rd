@@ -50,7 +50,10 @@ where the first \code{m} columns are the columns in \code{data}, the next \code{
 are the additional variables defined in \code{formula} but not found in \code{data},
 and the last \code{n} columns represent the \code{n} eigenvectors of the
 variance-covariance matrix. The rows are ordered according to the order of
-tip labels in \code{tree}. No errors raised if all the following requirements
+tip labels in \code{tree}. If \code{data} or any other data frame used is provided in
+terms of a list, the list has values of each field re-ordered and names
+imputed based on the first field in the list that has names before being
+coerced to data frame. No errors raised if all the following requirements
 are met:
 \itemize{
 \item The input \code{tree} is a valid object of class \code{"phylo"},
@@ -78,14 +81,25 @@ are met:
 \itemize{
 \item The data frame exists in the current environment and the variable is a column of that data frame,
 \item The number of rows of the data frame is equal to the number of tips in \code{tree},
-\item There are no redundant row names in the data frame if row names exist,
+\item All columns have names in the data frame,
+\item There are no redundant column names in the data frame,
 }
 }
 \item If \code{data} is supplied:
 \itemize{
 \item \code{data} can be coerced to a valid data frame,
 \item The number of rows of \code{data} is equal to the number of tips in \code{tree},
-\item There are no redundant row names in \code{data} if row names exist.
+\item All columns have names in \code{data},
+\item There are no redundant column names in \code{data},
+}
+\item When \code{data} or other data frames used are provided in terms of a list:
+\itemize{
+\item The list is not empty,
+\item The fields in the list all have the same lengths,
+\item All the fields in the list has tags,
+\item The tags of the fields in the list are all unique,
+\item The list does not contain fields that have NA values in names,
+\item The list does not contain fields that have redundant names.
 Otherwise raises an error.
 }
 }
@@ -96,6 +110,15 @@ Raises a warning if:
 \item The row names of \code{data} are not equal to the tip labels of \code{tree},
 \item A variable in \code{formula} is a vector found in the current environment and either don't have names or have names not equal to the tip labels of \code{tree},
 \item A variable in \code{formula} is column of a data frame found in the current environment and the row names of the data frame are not equal to the tip labels of \code{tree}.
+\item When \code{data} or other data frames used are provided in terms of a list:
+\itemize{
+\item There are fields in the list that have no names,
+\itemize{
+\item If none of the fields has names, the fields will remain having no names,
+\item If only some of the fields have no names, these fields will take the names of the first field in the list that has names,
+}
+\item The fields in the list do have have the same set of names, in which case the fields will all will take the names of the first field in the list that has names.
+}
 }
 }
 \description{
