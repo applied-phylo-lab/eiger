@@ -42,6 +42,58 @@ parse_formula <- function(formula) {
   list(dfs = dfs, fields = fields, plains = plains)
 }
 
+#' Check if a list contains redundant values
+#'
+#' `check_redundant()` checks if a list contains any redundant values.
+#'
+#' @param list_val The list to check.
+#' @param error_message The error message to display if the list contains
+#'   redundant values.
+#'
+#' @returns Invisible returns `NULL` if the list does not contain any redundant
+#'   values. Otherwise raises an error.
+#'
+#' @keywords internal
+check_redundant <- function(list_val, error_message) {
+  if (length(unique(list_val)) != length(list_val)) {
+    cli::cli_abort(error_message)
+  }
+  invisible(NULL)
+}
+
+#' Check if a names list is `NULL` or contains `NA` or redundant values
+#'
+#' `check_names_list()` checks if a names list is `NULL` or contains `NA` or redundant values.
+#'
+#' @param list_val The names list to check.
+#' @param null_message The error message to display if the list is `NULL`.
+#' @param na_top_message A string representing the overall big issue if the list contains `NA` values.
+#' @param na_bullet_prefix Part of the bullet message that goes before the listed
+#'   variant if the list contains `NA` values.
+#' @param na_bullet_suffix Part of the bullet message that goes after the listed
+#'   variant if the list contains `NA` values.
+#' @param na_extra_message A string stating the number of unlisted problems if the list contains `NA` values.
+#' @param redundant_message The error message to display if the list contains redundant values.
+#'
+#' @returns Invisible returns `NULL` if the list is not `NULL` and does not contain any `NA` or redundant
+#'   values. Otherwise raises an error.
+#'
+#' @keywords internal
+check_names_list <- function(list_val, null_message, na_top_message,
+                             na_bullet_prefix, na_bullet_suffix,
+                             na_extra_message, redundant_message) {
+  if (is.null(list_val)) {
+    cli::cli_abort(null_message)
+  }
+  if (any(list_val == "" | is.na(list_val))) {
+    na_idx <- which(list_val == "" | is.na(list_val))
+    create_bullet_error(na_idx, na_top_message, na_bullet_prefix,
+                        na_bullet_suffix, na_extra_message)
+  }
+  check_redundant(list_val, redundant_message)
+  invisible(NULL)
+}
+
 #' Check if the list can be coerced to a valid data frame
 #'
 #' `check_list()` checks if the list can be coerced to a valid data frame with
@@ -87,23 +139,16 @@ check_list <- function(list_val, list_name = NULL, is_data = FALSE) {
     cli::cli_abort(paste0("Can't find a unique length for all the fields in ", str1, "."))
   }
 
-  # check if there are fields with no tags
+  # check if there are fields with no tags or redundant tags
   field_tags <- names(list_val)
-  if (is.null(field_tags)) {
-    cli::cli_abort(paste0("Can't find any tags for ", str1, "."))
-  }
-  if (any(field_tags == "") || any(is.na(field_tags))) {
-    tag_idx <- which(field_tags == "" | is.na(field_tags))
-    top_message <- paste0("Can't find the tags for all the fields in ", str2, ".")
-    bullet_prefix <- "The tag for field "
-    bullet_suffix <- " can't be found."
-    extra_message <- paste0(" more fields in ", str2, " do not have tags.")
-    create_bullet_error(tag_idx, top_message, bullet_prefix, bullet_suffix, extra_message)
-  }
-  # check if there are redundant tags
-  if (anyDuplicated(field_tags) > 0) {
-    cli::cli_abort(paste0("The tags of the fields in ", str1, " must all be unique."))
-  }
+  null_message <- paste0("Can't find any tags for ", str1, ".")
+  na_top_message <- paste0("Can't find the tags for all the fields in ", str2, ".")
+  na_bullet_prefix <- "The tag for field "
+  na_bullet_suffix <- " can't be found."
+  na_extra_message <- paste0(" more fields in ", str2, " do not have tags.")
+  redundant_message <- paste0("The tags of the fields in ", str1, " must all be unique.")
+  check_names_list(field_tags, null_message, na_top_message, na_bullet_prefix,
+                   na_bullet_suffix, na_extra_message, redundant_message)
 
   # check if there are fields with no names
   field_rownames_list <- lapply(list_val, names)
@@ -123,7 +168,7 @@ check_list <- function(list_val, list_name = NULL, is_data = FALSE) {
       }
     }
   }
-  # check if there are fields with redundant (row) names or NA in names
+  # check if there are fields with redundant names or NA in names
   n_fields <- length(field_tags)
   for (i in 1:n_fields) {
     field_tag <- field_tags[i]
@@ -132,12 +177,11 @@ check_list <- function(list_val, list_name = NULL, is_data = FALSE) {
       cli::cli_abort(c(paste0("The names for each field in ", str1, " must not contain NA values."),
                        "x" = paste0("The names for field ", field_tag, " contains NA values.")))
     }
-    if (anyDuplicated(field_rownames) > 0) {
-      cli::cli_abort(c(paste0("The names for each field in ", str1, " must all be unique."),
-                       "x" = paste0("The names for field ", field_tag, " are not all unique.")))
-    }
+    error_message <- c(paste0("The names for each field in ", str1, " must all be unique."),
+                       "x" = paste0("The names for field ", field_tag, " are not all unique."))
+    check_redundant(field_rownames, error_message)
   }
-  # check if all the fields have the same set of (row) names
+  # check if all the fields have the same set of names
   if (n_fields >= 2) {
     field_rownames_list <- lapply(list_val, names)
     field_1_rownames <- field_rownames_list[[1]]
@@ -244,22 +288,15 @@ check_dataframe <- function(df_val, tip_labels, df_name = NULL, is_data = FALSE,
     rownames(df_val) <- tip_labels
   }
 
-  # check if there are column names
-  if (is.null(df_colnames)) {
-    cli::cli_abort(paste0("Can't find column names for ", str3, "."))
-  }
-  if (any(df_colnames == "") || any(is.na(df_colnames))) {
-    col_idx <- which(df_colnames == "" | is.na(df_colnames))
-    top_message <- paste0("Can't find the names for all the columns in ", str3, ".")
-    bullet_prefix <- "The name for column "
-    bullet_suffix <- " can't be found."
-    extra_message <- paste0(" more columns in ", str3, " do not have names.")
-    create_bullet_error(col_idx, top_message, bullet_prefix, bullet_suffix, extra_message)
-  }
-  # check if there are redundant column names
-  if (anyDuplicated(df_colnames) > 0) {
-    cli::cli_abort(paste0("The column names in ", str3, " must all be unique."))
-  }
+  # check if there are columns with no names or redundant names
+  null_message <- paste0("Can't find column names for ", str3, ".")
+  na_top_message <- paste0("Can't find the names for all the columns in ", str3, ".")
+  na_bullet_prefix <- "The name for column "
+  na_bullet_suffix <- " can't be found."
+  na_extra_message <- paste0(" more columns in ", str3, " do not have names.")
+  redundant_message <- paste0("The column names in ", str3, " must all be unique.")
+  check_names_list(df_colnames, null_message, na_top_message, na_bullet_prefix,
+                   na_bullet_suffix, na_extra_message, redundant_message)
 
   df_val
 }
@@ -334,9 +371,8 @@ check_plain <- function(plain_val, plain, tip_labels, n_tips = length(tip_labels
                     "i" = "The order of the elements must be the same as the order of tip labels of the tree."))
   } else {
     # check if there are redundant names for the variable
-    if (length(unique(plain_names)) != length(plain_names)) {
-      cli::cli_abort(paste0("The names of variable ", plain, " must be all unique."))
-    }
+    error_message <- paste0("The names of variable ", plain, " must be all unique.")
+    check_redundant(plain_names, error_message)
     # check if the names are the same as tip labels
     if (setequal(plain_names, tip_labels)) {
       plain_val <- plain_val[tip_labels]
@@ -476,9 +512,8 @@ clean_eiger <- function(formula = NULL, data = NULL, tree, n_eigenvectors, x = N
   # check the tree
   check_phylo(tree)
   check_phylo_branches(tree)
-  if (length(unique(tree$tip.label)) != length(tree$tip.label)) {
-    cli::cli_abort("The tip labels of the input tree must be all unique.")
-  }
+  error_message <- "The tip labels of the input tree must be all unique."
+  check_redundant(tree$tip.label, error_message)
 
   # check the dimensions
   tip_labels <- tree$tip.label

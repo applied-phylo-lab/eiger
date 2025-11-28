@@ -30,6 +30,57 @@ test_that("parse_formula() passes for valid formulas", {
   expect_true(setequal(f6$plains, c("I", "y", "log")))
 })
 
+test_that("check_redundant() passes for valid lists", {
+  expect_silent(check_redundant(1:10, "The list contains redundant elements."))
+  expect_silent(check_redundant(c("tip_3", "tip_6", "tip_10"),
+                                "The list contains redundant elements."))
+})
+
+test_that("check_redundant() fails for invalid lists", {
+  expect_error(check_redundant(paste0("tip_", c(1:19, 17)),
+                               "The list contains redundant elements."),
+               "redundant elements")
+})
+
+test_that("check_names_list() passes for valid names lists", {
+  list_val <- paste0("Var_", 1:20)
+  null_message <- paste0("Can't find names for the variables.")
+  na_top_message <- paste0("Can't find the names for all the variables.")
+  na_bullet_prefix <- "The name for variable "
+  na_bullet_suffix <- " can't be found."
+  na_extra_message <- paste0(" more variables do not have names.")
+  redundant_message <- paste0("The variable names must all be unique.")
+  expect_silent(check_names_list(list_val, null_message, na_top_message,
+                                 na_bullet_prefix, na_bullet_suffix,
+                                 na_extra_message, redundant_message))
+})
+
+test_that("check_names_list() passes for invalid names lists", {
+  list_val <- NULL
+  null_message <- paste0("Can't find names for the variables.")
+  na_top_message <- paste0("Can't find the names for all the variables.")
+  na_bullet_prefix <- "The name for variable "
+  na_bullet_suffix <- " can't be found."
+  na_extra_message <- paste0(" more variables do not have names.")
+  redundant_message <- paste0("The variable names must all be unique.")
+  expect_error(check_names_list(list_val, null_message, na_top_message,
+                                   na_bullet_prefix, na_bullet_suffix,
+                                   na_extra_message, redundant_message),
+               null_message)
+
+  list_val <- c(paste0("Var_", c(1:19)), NA)
+  expect_error(check_names_list(list_val, null_message, na_top_message,
+                                na_bullet_prefix, na_bullet_suffix,
+                                na_extra_message, redundant_message),
+               na_top_message)
+
+  list_val <- paste0("Var_", c(1:12, 6, 14:20))
+  expect_error(check_names_list(list_val, null_message, na_top_message,
+                                na_bullet_prefix, na_bullet_suffix,
+                                na_extra_message, redundant_message),
+               redundant_message)
+})
+
 test_that("check_list() passes for good inputs", {
   x <- 1:20
   names(x) <- paste0("tip_", 1:20)
@@ -243,6 +294,93 @@ test_that("check_dataframe() fails for invalid inputs", {
 
 })
 
+test_that("check_column_na() passes for valid inputs", {
+  df1 <- data.frame(x = 1:20, y = 21:40, z = 31:50, w = c(1:19, NA))
+  expect_silent(check_column_na(df1, "x", "df1"))
+  expect_silent(check_column_na(df1, "y", "df1"))
+  expect_silent(check_column_na(df1, "z", "df1"))
+})
+
+test_that("check_column_na() fails for invalid inputs", {
+  df1 <- data.frame(x = c(1:19, NA), y = c(rep(NA, 10), 31:40), z = 31:50)
+  expect_error(check_column_na(df1, "x", "df1", FALSE), "NA values")
+  expect_error(check_column_na(df1, "y", NULL, TRUE), "NA values")
+})
+
+test_that("check_plain() passes for good inputs", {
+  tip_labels <- paste0("tip_", 1:20)
+  x0 <- 1:20
+  names(x0) <- tip_labels
+  y0 <- 21:40
+  names(y0) <- tip_labels
+  z0 <- 31:50
+  names(z0) <- tip_labels
+
+  x1 <- (check_plain(x0, "x", tip_labels))
+  expect_equal(x1, x0)
+  y1 <- (check_plain(y0, "y", tip_labels, 20))
+  expect_equal(y1, y0)
+  z1 <- (check_plain(z0, "z", tip_labels, 20))
+  expect_equal(z1, z0)
+
+  y <- 40:21
+  names(y) <- paste0("tip_", 20:1)
+  y2 <- (check_plain(y, "y", tip_labels, 20))
+  expect_equal(y2, y0)
+  z <- withr::with_seed(42, sample(z0))
+  names(z) <- paste0("tip_", (z - 30))
+  z2 <- (check_plain(z, "z", tip_labels))
+  expect_equal(z2, z0)
+})
+
+test_that("check_plain() passes for valid but bad inputs", {
+  tip_labels <- paste0("tip_", 1:20)
+  x0 <- 1:20
+
+  expect_warning(x1 <- (check_plain(x0, "x", tip_labels)), "not exist")
+  expect_equal(x1, x0)
+
+  x2 <- x0
+  names(x2) <- paste0("tip_", 21:40)
+  expect_warning(x3 <- (check_plain(x2, "x", tip_labels, 20)), "match")
+  expect_equal(x3, x2)
+
+  names(x2) <- c("outlier", paste0("tip_", 22:39), NA)
+  expect_warning(x4 <- (check_plain(x2, "x", tip_labels, 20)), "match")
+  expect_equal(x4, x2)
+})
+
+test_that("check_plain() fails for invalid inputs", {
+  tip_labels <- paste0("tip_", 1:20)
+  x0 <- 1:10
+  expect_error(check_plain(x0, "x", tip_labels), "same number")
+  expect_error(check_plain(x0, "x", tip_labels, 20), "same number")
+
+  x0 <- c(1:10, rep(NA, 2), 13:19, NA)
+  expect_error(check_plain(x0, "x", tip_labels), "NA values")
+
+  x0 <- 1:20
+  names(x0) <- c(NA, paste0("tip_", 22:39), NA)
+  expect_error(check_plain(x0, "x", tip_labels), "names.*unique")
+  names(x0) <- paste0("tip_", c(22:39, 22, 35))
+  expect_error(check_plain(x0, "x", tip_labels), "names.*unique")
+})
+
+test_that("check_numeric_response() passes for valid inputs", {
+  x0 <- 1:20
+  expect_silent(check_numeric_response(x0, "x"))
+  x1 <- c(0.2, -0.6, 0.9, 3.12, 386.097, -88.8, 0, 0.1, 0, 0, 0)
+  expect_silent(check_numeric_response(x1, "x"))
+})
+
+test_that("check_numeric_response() fails for invalid inputs", {
+  x0 <- paste0("tip_", 1:20)
+  expect_error(check_numeric_response(x0, "x"), "character")
+  x1 <- c(TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE)
+  expect_error(check_numeric_response(x1, "x"), "logical")
+  x2 <- c(list(x = 1), list(x = 2), list(x = 3), list(x = 5))
+  expect_error(check_numeric_response(x2, "x"), "list")
+})
 
 test_that("clean_eiger() passes for good inputs", {
   s1 <- ape::stree(10, type = "star")
