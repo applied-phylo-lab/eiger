@@ -5,12 +5,10 @@
 \title{Run eiger regression}
 \usage{
 run_eiger(
-  formula = NULL,
-  data = NULL,
+  formula,
+  data,
   tree,
   n_eigenvectors,
-  x = NULL,
-  y = NULL,
   dc = FALSE,
   prepared = FALSE,
   intercept = TRUE,
@@ -18,28 +16,19 @@ run_eiger(
 )
 }
 \arguments{
-\item{formula}{A formula describing the model to run eiger regression. If
-supplied, \code{x} and \code{y} are ignored. The eigenvectors should not appear in
-the formula. Default to \code{NULL}.}
+\item{formula}{A formula describing the model to run eiger regression. The
+eigenvectors should not appear in the formula.}
 
 \item{data}{A data frame of \code{n} rows, where \code{n} is the number of tips in
 \code{tree}. If \code{prepared} is \code{FALSE}, the data frame should contain the
-variables in the model. If not supplied or if variables are not found in
-\code{data}, the variables are taken from the current environment. If \code{prepared}
+variables in the model. If \code{prepared}
 is \code{TRUE}, the data frame should be the output data frame from
-\link{prepare_eiger}. Default to \code{NULL}.}
+\link{prepare_eiger}.}
 
 \item{tree}{A phylogenetic tree as a valid object of class \code{"phylo"}.}
 
 \item{n_eigenvectors}{The number of eigenvectors to include as additional
 fixed effects in eiger regression.}
-
-\item{x}{A vector representing the predictor variables of the \code{n} tips in the
-tree. Used only when \code{formula} is missing. Default to \code{NULL}.}
-
-\item{y}{A vector representing the outcome variables of the \code{n} tips in the
-tree. The values must be numeric. Used only when \code{formula} is missing.
-Default to \code{NULL}.}
 
 \item{dc}{A boolean value. \code{TRUE} if the eigenvectors need to be calculated
 from double-centered variance-covariance matrix and \code{FALSE} otherwise.
@@ -61,46 +50,16 @@ values of \link[phylolm:phylolm]{phylolm::phylolm}. Raises error if:
 \item The input \code{tree} does not have all branch lengths defined or have some of them being negative,
 \item The input \code{tree} does not have all unique tip labels,
 \item \code{n_eigenvectors} is greater than the number of tips in \code{tree} or less than 0,
-\item When \code{prepared} is \code{FALSE} and \code{x} and \code{y} are used:
+\item When \code{prepared} is \code{FALSE}:
 \itemize{
-\item \code{y} is a not vector of numeric values,
-\item The lengths of \code{x} and \code{y} are not equal to the number of tips in \code{tree},
-\item \code{x} and \code{y} contain \code{NA} values,
-\item There are redundant names in \code{x} and \code{y} if names exist,
-}
-\item When \code{prepared} is \code{FALSE} and \code{formula} is used:
-\itemize{
-\item Some variable in \code{formula} can't be found either in \code{data} or in the current environment,
-\item The length of some variable in \code{formula} is not equal to the number of tips in \code{tree},
+\item Some variable in \code{formula} can't be found in \code{data},
 \item Some variable in \code{formula} contains \code{NA} values,
 \item The response variable in \code{formula} is a not vector of numeric values,
-\item When a variable in \code{formula} is in the current environment:
-\itemize{
-\item There are redundant names in the variable if names exist,
-}
-\item When a variable in \code{formula} is a field of some other data frame:
-\itemize{
-\item The data frame does not exist in the current environment or the variable is not a column of that data frame,
-\item The number of rows of the data frame is not equal to the number of tips in \code{tree},
-\item There are columns with no names in the data frame,
-\item There are redundant column names in the data frame,
-}
-}
-\item When \code{data} is supplied:
-\itemize{
-\item \code{data} can't be coerced to a valid data frame,
+\item \code{data} is not provided as a matrix or a data frame,
 \item The number of rows of \code{data} is not equal to the number of tips in \code{tree},
+\item The row names of \code{data} are equal to the tip labels of \code{tree},
 \item There are columns with no names in \code{data},
 \item There are redundant column names in \code{data},
-}
-\item When \code{data} or other data frames used are provided in terms of a list:
-\itemize{
-\item The list is empty,
-\item The fields in the list do not all have the same lengths,
-\item Some fields in the list have no tags,
-\item The tags of the fields in the list are not all unique,
-\item The list contains fields that have NA values in names,
-\item The list contains fields that have redundant names,
 }
 \item When \code{prepared} is \code{TRUE}:
 \itemize{
@@ -111,39 +70,14 @@ values of \link[phylolm:phylolm]{phylolm::phylolm}. Raises error if:
 \item \code{n_eigenvectors} is too large (even though it's valid),
 \item Other problems when running \link[phylolm:phylolm]{phylolm::phylolm}.
 }
-
-Raises a warning if:
-\itemize{
-\item \code{x} and \code{y} are used and either don't have names or have names not equal to the tip labels of \code{tree},
-\item The row names of \code{data} are not equal to the tip labels of \code{tree},
-\item A variable in \code{formula} is a vector found in the current environment and either don't have names or have names not equal to the tip labels of \code{tree},
-\item A variable in \code{formula} is column of a data frame found in the current environment and the row names of the data frame are not equal to the tip labels of \code{tree}.
-\item When \code{data} or other data frames used are provided in terms of a list:
-\itemize{
-\item There are fields in the list that have no names,
-\itemize{
-\item If none of the fields has names, the fields will remain having no names,
-\item If only some of the fields have no names, these fields will take the names of the first field in the list that has names,
-}
-\item The fields in the list do have have the same set of names, in which case the fields will all will take the names of the first field in the list that has names.
-}
-}
 }
 \description{
 \code{run_eiger()} runs the eiger regression, which includes
 eigenvectors of the variance-covariance matrix of a phylogenetic tree as
 fixed effects in \code{phylolm}.
 \itemize{
-\item If users have not called \link{prepare_eiger} for the regression, to build the regression model, users should provide one of the followings:
-\itemize{
-\item The predictor and outcome variables \code{x} and \code{y}.
-\item \code{formula} (and \code{data}).
-}
-\item If users have called \link{prepare_eiger} for the regression:
-\itemize{
-\item If users used \code{x} and \code{y} for \link{prepare_eiger}, users just need to provide the output data frame from \link{prepare_eiger} as \code{data} argument.
-\item If users used \code{formula} (and \code{data}) for \link{prepare_eiger}, users should provide both the output data frame from \link{prepare_eiger} as \code{data} argument and the original formula as \code{formula}.
-}
+\item If users have not called \link{prepare_eiger} for the regression, to build the regression model, users should provide \code{formula} and \code{data}.
+\item If users have called \link{prepare_eiger} for the regression, users should provide both the output data frame from \link{prepare_eiger} as \code{data} argument and the original formula as \code{formula}.
 }
 }
 \examples{
@@ -160,12 +94,6 @@ run_eiger(y ~ x, BM_df, yule_tree, 20)
 run_eiger(y ~ x + log(z), BM_df, yule_tree, 20, dc = TRUE, intercept = FALSE)
 
 group <- c(rep("A", 40), rep("B", 60))
-suppressWarnings(run_eiger(y ~ x + group, BM_df, yule_tree, 20))
-suppressWarnings(run_eiger(BM_df$y ~ BM_df$x + group, tree = yule_tree, n_eigenvectors = 20))
-
-suppressWarnings(run_eiger(tree = yule_tree, n_eigenvectors = 20, x = x, y = y))
-
-suppressWarnings(eiger_df <- prepare_eiger(y ~ x + group, BM_df, yule_tree, 20))
-run_eiger(y ~ x + group, eiger_df, yule_tree, 20, prepared = TRUE)
+try(run_eiger(y ~ x + group, BM_df, yule_tree, 20))
 
 }

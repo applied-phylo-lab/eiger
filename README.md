@@ -80,12 +80,11 @@ convenience of downstream analyses:
 
 ``` r
 BM <- phytools::fastBM(yule_tree, 1, nsim = 2)
-x <- BM[, 1]
-y <- BM[, 2]
+colnames(BM) <- c("x", "y")
 
-df <- prepare_eiger(tree = yule_tree, n_eigenvectors = 20, x = x, y = y)
+df <- prepare_eiger(y ~ x, BM, yule_tree, 20)
 utils::head(df[, 1:10])
-#>              X        Y    eigen_1    eigen_2     eigen_3       eigen_4
+#>              x        y    eigen_1    eigen_2     eigen_3       eigen_4
 #> t48  0.5059172 7.960040 -0.1576493 -0.1515420  0.00842073  0.000000e+00
 #> t49  2.3404129 6.848499 -0.1447424  0.1734111  0.18673123  8.348522e-17
 #> t11  2.4644374 7.064110 -0.1609621 -0.1642439  0.01000946 -9.060398e-19
@@ -105,7 +104,7 @@ Then you can run eiger regression (phylolm with eigenvectors of the
 variance-covariance matrix as fixed effects):
 
 ``` r
-run_eiger(data = df, tree = yule_tree, n_eigenvectors = 20, x = x, y = y, prepared = TRUE)
+run_eiger(y ~ x, df, yule_tree, 20, prepared = TRUE)
 #> Call:
 #> phylolm::phylolm(formula = reg_formula, data = df, phy = tree)
 #> 
@@ -116,7 +115,7 @@ run_eiger(data = df, tree = yule_tree, n_eigenvectors = 20, x = x, y = y, prepar
 #> sigma2: 0.3873585 
 #> 
 #> Coefficients:
-#>  (Intercept)            X      eigen_1      eigen_2      eigen_3      eigen_4 
+#>  (Intercept)            x      eigen_1      eigen_2      eigen_3      eigen_4 
 #>  -70.7508706    0.1097984 -516.1221221   28.6089632   -6.9693645  133.9414754 
 #>      eigen_5      eigen_6      eigen_7      eigen_8      eigen_9     eigen_10 
 #>    5.9160672   -2.2098423    4.0636454   -2.0317750    3.2329012    1.3908234 
@@ -130,7 +129,7 @@ Alternatively, you can compute the eigenvectors and run eiger regression
 in one step:
 
 ``` r
-run_eiger(tree = yule_tree, n_eigenvectors = 30, x = x, y = y)
+run_eiger(y ~ x, BM, yule_tree, 30)
 #> Call:
 #> phylolm::phylolm(formula = reg_formula, data = df, phy = tree)
 #> 
@@ -141,7 +140,7 @@ run_eiger(tree = yule_tree, n_eigenvectors = 30, x = x, y = y)
 #> sigma2: 0.3123935 
 #> 
 #> Coefficients:
-#>  (Intercept)            X      eigen_1      eigen_2      eigen_3      eigen_4 
+#>  (Intercept)            x      eigen_1      eigen_2      eigen_3      eigen_4 
 #>  41.60120742   0.13076109 243.86041859 -23.82713774   4.51857322 -90.71404236 
 #>      eigen_5      eigen_6      eigen_7      eigen_8      eigen_9     eigen_10 
 #>  -7.99290734  -1.94580464  -3.60781165  -0.85319660  -2.35654129   1.61123302 

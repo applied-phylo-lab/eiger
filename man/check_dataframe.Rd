@@ -4,24 +4,13 @@
 \alias{check_dataframe}
 \title{Check if the data frame is compatible for eiger regression}
 \usage{
-check_dataframe(
-  df_val,
-  tip_labels,
-  df_name = NULL,
-  is_data = FALSE,
-  n_tips = length(tip_labels)
-)
+check_dataframe(df_val, tip_labels, n_tips = length(tip_labels))
 }
 \arguments{
 \item{df_val}{The data frame to check.}
 
 \item{tip_labels}{The tip labels of the phylogenetic tree for eiger
 regression.}
-
-\item{df_name}{The name of the data frame. Default to \code{NULL}.}
-
-\item{is_data}{A boolean. \code{TRUE} if the data frame is the data argument used
-for the regression, otherwise \code{FALSE}. Default to \code{FALSE}.}
 
 \item{n_tips}{The number of tips in the phylogenetic tree. Default to
 \code{length(tip_labels)}.}

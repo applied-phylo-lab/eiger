@@ -4,17 +4,12 @@
 \alias{check_column_na}
 \title{Check if a column in the data frame contains \code{NA} values}
 \usage{
-check_column_na(df_val, col, df_name = NULL, is_data = FALSE)
+check_column_na(df_val, col)
 }
 \arguments{
 \item{df_val}{The data frame to check.}
 
 \item{col}{A string for the column name to check in the data frame.}
-
-\item{df_name}{The name of the data frame. Default to \code{NULL}.}
-
-\item{is_data}{A boolean. \code{TRUE} if the data frame is the data argument used
-for the regression, otherwise \code{FALSE}. Default to \code{FALSE}.}
 }
 \value{
 Invisible returns \code{NULL} if the column of the data frame does not

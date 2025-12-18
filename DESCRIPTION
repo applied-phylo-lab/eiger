@@ -18,14 +18,12 @@ License: MIT + file LICENSE
 Imports:
     ape,
     cli,
-    dplyr,
     graphics,
     grDevices,
     phylolm,
     phytools,
     rlang,
     stats,
-    stringr,
     utils
 Suggests: 
     testthat (>= 3.0.0),
